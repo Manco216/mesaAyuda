@@ -1,0 +1,46 @@
+/* Overrides específicos para editar.html: modo oscuro y fuentes */
+
+/* Usar variables para texto y superficies en controles de edición */
+.edit-field label { color: var(--color-text); font-size: inherit; }
+.edit-field input[type="text"],
+.edit-field input[type="password"],
+.edit-field select {
+  background: var(--surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  font-size: inherit;
+}
+.edit-field input::placeholder { color: var(--muted); }
+.edit-hint { color: var(--color-text-light, #6b7280); }
+
+/* Botones dentro de acciones de paleta usan superficie y texto por defecto */
+.palette-actions .preview,
+.palette-actions .apply,
+#btn-reset,
+#btn-change-pass {
+  background: var(--surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.palette-actions .apply { background: var(--brand-secondary); color: #fff; border-color: transparent; }
+
+/* Modo oscuro: garantizar texto claro y placeholders visibles */
+.theme-dark .edit-panel h2 { color: var(--color-text); }
+.theme-dark .edit-field label { color: var(--color-text); }
+.theme-dark .edit-field input[type="text"],
+.theme-dark .edit-field input[type="password"],
+.theme-dark .edit-field select {
+  background: #111827;
+  color: var(--color-text);
+  border-color: #334155;
+}
+.theme-dark .edit-field input::placeholder { color: #9ca3af; }
+.theme-dark .edit-hint { color: #9ca3af; }
+.theme-dark .palette-actions .preview { background: #374151; color: #e5e7eb; border-color: rgba(255,255,255,0.12); }
+.theme-dark #btn-reset,
+.theme-dark #btn-change-pass { background: #374151; color: #e5e7eb; border-color: rgba(255,255,255,0.12); }
+
+/* Asegurar texto claro en títulos y badges del catálogo dentro del modal */
+.theme-dark .catalog-card-title,
+.theme-dark .catalog-select,
+.theme-dark #catalogModal .details-subtitle { color: var(--color-text); }
