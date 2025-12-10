@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Socya - Sistema de Planificación</title>
+    <link rel="stylesheet" href="../src/App.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+    <link rel="stylesheet" href="../libs/gridstack.min.css" />
+    <link rel="stylesheet" href="../src/styles.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  </head>
+  <body>
+    <template id="sidebar-template">
+      <nav class="sidebar-menu">
+        <a href="./dashboard.html" class="sidebar-item" data-page="dashboard"><span class="sidebar-icon" data-lucide="layout-dashboard"></span><span>Dashboards</span></a>
+        <a href="./index.html" class="sidebar-item" data-page="planning"><span class="sidebar-icon" data-lucide="calendar"></span><span>Planificación</span></a>
+        <a href="https://drive.google.com/file/d/1sG94XW0CLRHV3pqKZxALqc8Q4Pq2EnRA/view" class="sidebar-item" target="_blank" rel="noopener"><span class="sidebar-icon" data-lucide="file-text"></span><span>Manual Interactivo</span></a>
+        <a href="https://drive.google.com/file/d/1YnlgdMOOAyz80l8D66bHhvPe0jNTkq5W/view" class="sidebar-item" target="_blank" rel="noopener"><span class="sidebar-icon" data-lucide="shield"></span><span>Política de seguridad</span></a>
+        <a href="#" class="sidebar-item" data-page="documents"><span class="sidebar-icon" data-lucide="folder-open"></span><span>Documentos de operaciones TI</span></a>
+        <a href="./editar.html" class="sidebar-item" data-page="editar"><span class="sidebar-icon" data-lucide="square-pen"></span><span>Editar</span></a>
+      </nav>
+    </template>
+
+    <template id="header-template">
+      <p class="welcome-text">Bienvenido a la mesa de ayuda, Juan</p>
+      <img src="../img/Usuario1.png" alt="Ilustración" class="welcome-figure" />
+    </template>
+
+    <template id="planning-template">
+      <div class="planning-layout">
+        <div class="calendar-section"><div id="calendar-root"></div></div>
+        <div class="tasks-section"><div id="tasks-root"></div></div>
+      </div>
+    </template>
+
+    <template id="dashboards-template">
+      <div id="fabContainer" class="fab-container" aria-label="Acciones rápidas" role="group">
+        <button id="requestsBtn" class="fab-secondary" aria-label="Peticiones" title="Peticiones">
+          <span class="fa fa-list"></span>
+        </button>
+        <button id="fabMain" class="fab-main" aria-label="Opciones" title="Opciones">+</button>
+        <div class="fab-menu" aria-hidden="true">
+          <button id="addLine" class="fab-item" title="Gráfica de línea">L</button>
+          <button id="addBar" class="fab-item" title="Gráfica de barras">B</button>
+          <button id="addPie" class="fab-item" title="Gráfica de pastel">P</button>
+          <button id="addDoughnut" class="fab-item" title="Gráfica de dona">D</button>
+          <button id="addRadar" class="fab-item" title="Gráfica de radar">R</button>
+          <button id="addPolar" class="fab-item" title="Gráfica polar">Q</button>
+          <button id="addHBar" class="fab-item" title="Barras horizontales">H</button>
+          <button id="addArea" class="fab-item" title="Gráfica de área">A</button>
+          <button id="addStacked" class="fab-item" title="Barras apiladas">S</button>
+          <button id="addMixed" class="fab-item" title="Gráfica mixta">M</button>
+          <button id="clear" class="fab-item clear-btn" title="Limpiar">×</button>
+        </div>
+      </div>
+
+      <div class="grid-stack"></div>
+      <section id="edit-view" class="edit-view" aria-label="Editar configuración" role="region"></section>
+
+      <div id="chartModal" class="modal" hidden>
+        <div class="modal-backdrop"></div>
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+          <div class="modal-header">
+            <h2 id="modalTitle">Información de la gráfica</h2>
+            <div class="modal-header-actions">
+              <button type="button" id="modalClose" class="modal-close" aria-label="Cerrar"><span data-lucide="x"></span></button>
+            </div>
+          </div>
+          <div class="modal-controls">
+            <div class="group">
+              <label for="modalCategory">Tipo:</label>
+              <select id="modalCategory">
+                <option value="tendencias">Tendencias temporales</option>
+                <option value="kpi">KPI / Valores únicos</option>
+                <option value="volumenes">Volúmenes / Conteos</option>
+                <option value="ranking">Comparación por responsable / ranking</option>
+                <option value="distribucion">Distribución por tipo / efectividad por área</option>
+                <option value="multivariables">Métricas compuestas / multivariables</option>
+                <option value="satisfaccion">Satisfacción / Evaluaciones</option>
+              </select>
+            </div>
+            <div class="group">
+              <span id="modalTypeLabel" class="type-badge" aria-live="polite">Tipo de gráfica: —</span>
+            </div>
+            <button type="button" id="modalClearBtn" class="modal-clear-btn">Limpiar dashboard</button>
+          </div>
+          <div class="modal-content">
+            <div class="modal-chart">
+              <canvas id="modalChartCanvas"></canvas>
+              <button type="button" id="modalPrev" class="modal-arrow left" aria-label="Anterior">‹</button>
+              <button type="button" id="modalNext" class="modal-arrow right" aria-label="Siguiente">›</button>
+            </div>
+            <div class="modal-stats">
+              <div id="modalStats"></div>
+              <table id="modalDataTable"></table>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" id="modalAddBtn">Agregar</button>
+          </div>
+        </div>
+        <div id="confirmDeleteOverlay" class="confirm-overlay" hidden>
+          <div class="confirm-box" role="alertdialog" aria-labelledby="confirmDeleteTitle" aria-describedby="confirmDeleteDesc">
+            <h3 id="confirmDeleteTitle">Confirmar eliminación</h3>
+            <p id="confirmDeleteDesc">¿Está seguro que desea eliminar esta gráfica?</p>
+            <div class="confirm-actions">
+              <button type="button" id="confirmCancelBtn" class="confirm-cancel">Cancelar</button>
+              <button type="button" id="confirmDeleteBtn" class="confirm-danger">Confirmar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="catalogModal" class="modal" hidden>
+        <div class="modal-backdrop"></div>
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="catalogTitle">
+          <div class="modal-header">
+            <h2 id="catalogTitle">Agregar gráficas</h2>
+            <div class="modal-header-actions">
+              <button type="button" id="catalogClose" class="modal-close" aria-label="Cerrar"><span data-lucide="x"></span></button>
+            </div>
+          </div>
+          <div class="modal-controls">
+            <div class="group">
+              <button type="button" id="catalogDetailsBtn" class="modal-add-btn" aria-label="Ver detalles">Detalles</button>
+              <button type="button" id="catalogBackBtn" class="modal-secondary-btn" aria-label="Volver al catálogo" hidden>Volver</button>
+              <button type="button" id="catalogFilterToggle" class="filter-toggle" aria-label="Abrir filtros">Filtrar</button>
+              <span id="catalogFilterIndicator" class="filter-indicator" aria-live="polite"></span>
+              <div id="catalogFilterDropdown" class="filter-dropdown" hidden>
+                <div class="filter-section">
+                  <label class="filter-label">Tipo de dato</label>
+                  <ul id="catalogDataTypeList" class="filter-list"></ul>
+                </div>
+                <div class="filter-section">
+                  <label class="filter-label">Tipos de gráfica</label>
+                  <ul id="catalogChartTypeList" class="filter-list multi"></ul>
+                </div>
+                <div class="filter-actions">
+                  <button type="button" id="catalogFilterResetBtn" class="modal-secondary-btn">Restablecer</button>
+                  <button type="button" id="catalogFilterApplyBtn" class="modal-add-btn">Aplicar</button>
+                </div>
+              </div>
+            </div>
+            <div class="group" style="margin-left:auto; gap:8px;">
+              <button type="button" id="catalogConfirmBtn" class="modal-add-btn">Agregar seleccionados</button>
+              <button type="button" id="catalogClearBtn" class="modal-clear-btn">Limpiar dashboard</button>
+            </div>
+          </div>
+          <div class="modal-content">
+            <div id="catalogGrid" class="view catalog-grid" aria-live="polite" role="region" aria-label="Catálogo de widgets"></div>
+            <div id="catalogDetailsView" class="view catalog-details" role="region" aria-label="Detalles de la gráfica" tabindex="-1" hidden>
+              <div class="details-header">
+                <h3 id="catalogDetailsTitle">Detalles</h3>
+                <p id="catalogDetailsType" class="details-subtitle">Tipo de gráfica seleccionado</p>
+              </div>
+              <div class="details-chart">
+                <canvas id="catalogDetailsCanvas" aria-describedby="catalogDetailsTitle"></canvas>
+                <button type="button" id="catalogPrev" class="modal-arrow left" aria-label="Anterior">‹</button>
+                <button type="button" id="catalogNext" class="modal-arrow right" aria-label="Siguiente">›</button>
+              </div>
+              <div class="details-stats">
+                <div id="catalogDetailsStats" class="stats-grid" aria-live="polite"></div>
+                <table id="catalogDetailsTable" aria-label="Resumen de datos"></table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="requestsModal" class="modal" hidden>
+        <div class="modal-backdrop"></div>
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="requestsTitle">
+          <div class="modal-header">
+            <h2 id="requestsTitle">Peticiones</h2>
+            <div class="modal-header-actions">
+              <button type="button" id="requestsClose" class="modal-close" aria-label="Cerrar"><span data-lucide="x"></span></button>
+            </div>
+          </div>
+          <div class="modal-content">
+            <div class="requests-container" id="requestsContainer">
+              <div id="requestsListPanel" class="requests-panel">
+                <ul id="requestsList" class="requests-list" aria-live="polite" aria-label="Lista de peticiones"></ul>
+              </div>
+              <div id="requestDetailsPanel" class="requests-panel details" hidden aria-hidden="true" aria-labelledby="requestDetailsTitle" role="region">
+                <div class="details-header">
+                  <h3 id="requestDetailsTitle">Detalle de petición</h3>
+                  <nav class="details-breadcrumb" aria-label="Miga de pan">
+                    <span>Peticiones</span><span class="sep">›</span><span>Detalle</span>
+                  </nav>
+                  <button type="button" id="requestDetailsBack" class="modal-secondary-btn" aria-label="Volver a la lista">Volver</button>
+                </div>
+                <div id="requestDetailsContent" class="details-content" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <div id="root"></div>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>window.global = window;</script>
+    <script src="../libs/gridstack-all.js?v=20241125-1"></script>
+    <script src="../libs/chart.umd.js?v=20241125-1"></script>
+    <script src="../src/menu.js?v=20241125-1"></script>
+    <script src="../src/app.js?v=20241125-1"></script>
+    <script src="../src/main.js?v=20241125-1"></script>
+  </body>
+</html>
