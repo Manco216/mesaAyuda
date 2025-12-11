@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -1770,7 +1770,15 @@ async function sendChatMessage(text) {
   const url = 'http://somos.socya.org:5678/webhook-test/195d398d-39a1-47f8-83b6-feebf0f7f392';
   let data = null, ok = false, status = 0;
   try {
-    const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }) });
+    const sessionId = getChatSessionId();
+    const memoryPayload = { 
+      nodes: [ { parameters: { contextWindowLength: 15 }, type: '@n8n/n8n-nodes-langchain.memoryBufferWindow', typeVersion: 1.3, position: [6944, 1568], id: '0c79fe87-e356-41b0-b2ce-8299557b2d96', name: 'Simple Memory1' } ],
+      connections: { 'Simple Memory1': { ai_memory: [ [] ] } },
+      pinData: {},
+      meta: { templateCredsSetupCompleted: true, instanceId: '01a7d86cd60aa5ad6a79b3966c762b4026878cfbcdf18bf8e52d2bcf5a38ce9f' }
+    };
+    const payload = { sessionId, message: text, memory: memoryPayload };
+    const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     status = resp.status; ok = resp.ok;
     const ct = resp.headers.get('content-type') || '';
     if (ct.includes('application/json')) data = await resp.json(); else data = await resp.text();
@@ -1824,17 +1832,32 @@ function closeChatbotModal() {
 }
 
 const CHAT_KEY = 'socya:chatbot-history';
+const CHAT_SESSION_KEY = 'socya:chatbot-sessionId';
+function getChatSessionId() {
+  try {
+    let id = sessionStorage.getItem(CHAT_SESSION_KEY);
+    if (!id) {
+      id = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ('sess-' + Date.now() + '-' + Math.floor(Math.random()*1000000));
+      sessionStorage.setItem(CHAT_SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    return 'sess-' + Date.now();
+  }
+}
 function saveChatMessage(sender, text) {
   try {
-    const raw = sessionStorage.getItem(CHAT_KEY);
+    const key = CHAT_KEY + ':' + getChatSessionId();
+    const raw = sessionStorage.getItem(key);
     const arr = raw ? JSON.parse(raw) : [];
     arr.push({ sender, text, ts: Date.now() });
-    sessionStorage.setItem(CHAT_KEY, JSON.stringify(arr));
+    sessionStorage.setItem(key, JSON.stringify(arr));
   } catch {}
 }
 function restoreChatHistory() {
   try {
-    const raw = sessionStorage.getItem(CHAT_KEY);
+    const key = CHAT_KEY + ':' + getChatSessionId();
+    const raw = sessionStorage.getItem(key);
     const arr = raw ? JSON.parse(raw) : [];
     const box = document.getElementById('chatHistory');
     if (!box) return;
