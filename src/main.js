@@ -587,6 +587,7 @@ const renderHeader = () => {
       <header class="header">
         <div class="header-content">
           <div class="welcome-box">${tpl}</div>
+          ${state.activePage === 'dashboard' ? '<button id="fabMain" type="button" class="dashboard-cta">Personaliza tu dashboard</button>' : ''}
         </div>
       </header>
     `;
@@ -598,6 +599,7 @@ const renderHeader = () => {
           <p class="welcome-text">${t('welcome', (state.preferences?.name||'').trim().split(/\s+/)[0] || '')}</p>
           <img src="${resolveAsset('img/Usuario1.png')}" alt="Ilustración" class="welcome-figure" />
         </div>
+        ${state.activePage === 'dashboard' ? '<button id="fabMain" type="button" class="dashboard-cta">Personaliza tu dashboard</button>' : ''}
       </div>
     </header>
   `;
