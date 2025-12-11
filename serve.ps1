@@ -47,9 +47,9 @@ while ($true) {
       $path = "public/index.html"
     } else {
       switch -Regex ($path) {
-        '^(index\.html|public/?$|planning|planificacion)$' { $path = "public/index.html"; break }
-        '^(editar|edit)$' { $path = "public/editar.html"; break }
-        '^dashboard$' { $path = "public/dashboard.html"; break }
+        '^(index(\.html)?|public/?$|planning|planificacion)$' { $path = "public/index.html"; break }
+        '^(editar(\.html)?|edit)$' { $path = "public/editar.html"; break }
+        '^(dashboard(\.html)?)$' { $path = "public/dashboard.html"; break }
         default { }
       }
     }

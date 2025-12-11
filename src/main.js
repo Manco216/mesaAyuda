@@ -828,6 +828,10 @@ const render = () => {
   // Aplicar traducción después de montar el DOM
   applyLanguage();
 
+  if (state.activePage === 'dashboard' && window.initDashboard) {
+    try { window.initDashboard(); } catch (e) { console.warn('Init dashboard error:', e); }
+  }
+
   // Mantener el ítem "editar" tanto en menú como en footer; sin eliminar duplicados
 
   // Con hamburguesa, no colapsamos automáticamente al navegar
@@ -1120,7 +1124,7 @@ const detectInitialPage = () => {
     const p = (window.location && window.location.pathname || '').toLowerCase();
     if (p.includes('/public/editar.html') || p.endsWith('/editar.html')) {
       state.activePage = 'editar';
-    } else if (p.includes('/public/index.html') || p.endsWith('/index.html')) {
+    } else if (p === '/' || p === '' || p.includes('/public/index.html') || p.endsWith('/index.html')) {
       state.activePage = 'planning';
     } else if (p.includes('/public/dashboard.html') || p.endsWith('/dashboard.html')) {
       state.activePage = 'dashboard';

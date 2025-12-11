@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -222,7 +222,7 @@ function initDashboardInternal() {
   });
 
   const STORAGE_KEY = "dashboard-layout:juan";
-  const grid = GridStack.init({ cellHeight: 220, margin: 5, float: true });
+  let grid;
   const DEFAULT_W = 4;
   const DEFAULT_H = 3;
   const charts = new Map();
@@ -237,6 +237,7 @@ function initDashboardInternal() {
   const tr = (es, en) => (appLang()==='en' ? en : es);
 
   function adjustGridHeight() {
+    if (!grid) return;
     const nodes = (grid.engine && grid.engine.nodes) ? grid.engine.nodes : [];
     const maxRow = nodes.reduce((m, n) => Math.max(m, (n.y || 0) + (n.h || 0)), 0);
     const margin = Array.isArray(grid.opts.margin) ? (grid.opts.margin[1] || grid.opts.margin[0] || 0) : (grid.opts.margin || 0);
@@ -248,27 +249,68 @@ function initDashboardInternal() {
     }
   }
 
-  const persist = () => { saveLayout(); adjustGridHeight(); };
-  grid.on('change', persist);
-  grid.on('dragstop', persist);
-  grid.on('resizestop', (e, el) => {
-    persist();
-    // Forzar recálculo del gráfico asociado al widget redimensionado
-    try {
-      const target = (el && el.el) ? el.el : (Array.isArray(el) ? el[0]?.el : null);
-      const id = target ? target.dataset.id : null;
-      const ch = id ? charts.get(id) : null;
-      if (ch && typeof ch.resize === 'function') { ch.resize(); }
-    } catch (_) {}
-  });
-  window.addEventListener('beforeunload', persist);
+  const persist = () => { if (grid) { saveLayout(); adjustGridHeight(); } };
 
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try { loadLayout(JSON.parse(saved)); } catch(e) { console.warn('Layout inválido, reseteando', e); addWidget('line'); }
-  } else {
-    addWidget('line');
-  }
+  window.initDashboard = function() {
+    if (grid || !document.querySelector('.grid-stack')) return;
+    
+    grid = GridStack.init({ cellHeight: 220, margin: 5, float: true });
+
+    grid.on('change', persist);
+    grid.on('dragstop', persist);
+    grid.on('resizestop', (e, el) => {
+      persist();
+      try {
+        const target = (el && el.el) ? el.el : (Array.isArray(el) ? el[0]?.el : null);
+        const id = target ? target.dataset.id : null;
+        const ch = id ? charts.get(id) : null;
+        if (ch && typeof ch.resize === 'function') { ch.resize(); }
+      } catch (_) {}
+    });
+    window.addEventListener('beforeunload', persist);
+
+    // Bind FAB buttons
+    const bind = (id, type) => {
+       const b = document.getElementById(id);
+       if(b) b.addEventListener('click', (e) => { e.preventDefault(); addWidget(type); });
+    };
+    bind('addLine', 'line');
+    bind('addBar', 'bar');
+    bind('addPie', 'pie');
+    bind('addDoughnut', 'doughnut');
+    bind('addRadar', 'radar');
+    bind('addPolar', 'polarArea');
+    bind('addHBar', 'barH');
+    bind('addArea', 'area');
+    bind('addStacked', 'stackedBar');
+    bind('addMixed', 'mixed');
+    
+    const clearBtn = document.getElementById('clear');
+    if(clearBtn) clearBtn.addEventListener('click', (e) => {
+       e.preventDefault();
+       if(confirm(tr('¿Limpiar todo?','Clear all?'))) {
+          grid.removeAll();
+          saveLayout();
+       }
+    });
+
+    // Toggle FAB menu
+    const fabMain = document.getElementById('fabMain');
+    const fabMenu = document.querySelector('.fab-menu');
+    if (fabMain && fabMenu) {
+        fabMain.addEventListener('click', () => {
+            const hidden = fabMenu.getAttribute('aria-hidden') === 'true';
+            fabMenu.setAttribute('aria-hidden', !hidden);
+        });
+    }
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try { loadLayout(JSON.parse(saved)); } catch(e) { console.warn('Layout inválido, reseteando', e); addWidget('line'); }
+    } else {
+      addWidget('line');
+    }
+  };
 
   function serialize() {
     return grid.engine.nodes.map(n => ({ x: n.x, y: n.y, w: n.w, h: n.h, type: n.el.dataset.type, id: n.el.dataset.id }));
