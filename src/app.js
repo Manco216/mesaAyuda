@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -1776,7 +1776,9 @@ async function sendChatMessage(text) {
     if (ct.includes('application/json')) data = await resp.json(); else data = await resp.text();
   } catch (e) { data = String(e || 'Error'); }
   const reply = typeof data === 'object' ? (data.reply || data.message || JSON.stringify(data)) : String(data);
-  appendChatMessage('bot', ok ? reply : ('Error ' + status + ': ' + reply));
+  const msg = ok ? reply : ('Error ' + status + ': ' + reply);
+  appendChatMessage('bot', msg);
+  saveChatMessage('bot', msg);
 }
 
 function openChatbotModal() {
@@ -1792,14 +1794,22 @@ function openChatbotModal() {
   const close = () => closeChatbotModal();
   if (backdrop) backdrop.addEventListener('click', close, { once: true });
   if (closeBtn) closeBtn.addEventListener('click', close, { once: true });
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const v = input.value.trim();
-    if (!v) return;
-    appendChatMessage('user', v);
-    input.value = '';
-    sendChatMessage(v);
-  }, { once: true });
+  // Evitar recarga y doble binding
+  form.setAttribute('action','javascript:void(0)');
+  if (!form.dataset.bound) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const v = input.value.trim();
+      if (!v) return;
+      appendChatMessage('user', v);
+      saveChatMessage('user', v);
+      input.value = '';
+      sendChatMessage(v);
+    });
+    form.dataset.bound = '1';
+  }
+  // Cargar historial al abrir
+  restoreChatHistory();
 }
 
 function closeChatbotModal() {
@@ -1811,4 +1821,25 @@ function closeChatbotModal() {
     modal.classList.remove('closing');
     modal.setAttribute('hidden','true');
   }, 180);
+}
+
+const CHAT_KEY = 'socya:chatbot-history';
+function saveChatMessage(sender, text) {
+  try {
+    const raw = sessionStorage.getItem(CHAT_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    arr.push({ sender, text, ts: Date.now() });
+    sessionStorage.setItem(CHAT_KEY, JSON.stringify(arr));
+  } catch {}
+}
+function restoreChatHistory() {
+  try {
+    const raw = sessionStorage.getItem(CHAT_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    const box = document.getElementById('chatHistory');
+    if (!box) return;
+    box.innerHTML = '';
+    arr.forEach(m => appendChatMessage(m.sender, m.text));
+    box.scrollTop = box.scrollHeight;
+  } catch {}
 }
