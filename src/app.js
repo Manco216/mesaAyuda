@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -106,6 +106,7 @@ try { window.applyChartDefaults = applyChartDefaults; window.refreshChartsForThe
     // Botones FAB
     const setTitle = (id, es, en) => { const el = document.getElementById(id); if (el) el.title = tr2(es, en); };
     setTitle('requestsBtn','Peticiones','Requests');
+    setTitle('chatbotBtn','Asistente','Assistant');
     setTitle('fabMain','Opciones','Options');
     setTitle('addLine','Gráfica de línea','Line chart');
     setTitle('addBar','Gráfica de barras','Bar chart');
@@ -1681,6 +1682,7 @@ function openChartModal(defaultId, previewType) {
   const fab = document.getElementById('fabContainer');
   const fabMain = document.getElementById('fabMain');
   const requestsBtn = document.getElementById('requestsBtn');
+  const chatbotBtn = document.getElementById('chatbotBtn');
   if (fabMain) {
     // Activación únicamente por clic (mouse/táctil)
     fabMain.addEventListener('click', (e) => {
@@ -1700,6 +1702,13 @@ function openChartModal(defaultId, previewType) {
     requestsBtn.addEventListener('click', (e) => {
       e.preventDefault();
       openRequestsModal();
+    });
+  }
+
+  if (chatbotBtn) {
+    chatbotBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openChatbotModal();
     });
   }
 
@@ -1732,3 +1741,74 @@ function openChartModal(defaultId, previewType) {
 }
 window.initDashboard = initDashboardInternal;
 document.addEventListener("DOMContentLoaded", initDashboardInternal);
+
+function trapFocusGeneric(modal, onEsc) {
+  const focusables = modal.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  const first = focusables[0]; const last = focusables[focusables.length - 1];
+  const onKey = (ev) => {
+    if (ev.key === 'Escape') { if (onEsc) onEsc(); }
+    if (ev.key === 'Tab') {
+      if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+      else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+    }
+  };
+  modal.addEventListener('keydown', onKey);
+  setTimeout(() => { (first || modal).focus(); }, 0);
+}
+
+function appendChatMessage(sender, text) {
+  const box = document.getElementById('chatHistory');
+  if (!box) return;
+  const msg = document.createElement('div');
+  msg.className = sender === 'user' ? 'msg user' : 'msg bot';
+  msg.textContent = text;
+  box.appendChild(msg);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendChatMessage(text) {
+  const url = 'http://somos.socya.org:5678/webhook-test/195d398d-39a1-47f8-83b6-feebf0f7f392';
+  let data = null, ok = false, status = 0;
+  try {
+    const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }) });
+    status = resp.status; ok = resp.ok;
+    const ct = resp.headers.get('content-type') || '';
+    if (ct.includes('application/json')) data = await resp.json(); else data = await resp.text();
+  } catch (e) { data = String(e || 'Error'); }
+  const reply = typeof data === 'object' ? (data.reply || data.message || JSON.stringify(data)) : String(data);
+  appendChatMessage('bot', ok ? reply : ('Error ' + status + ': ' + reply));
+}
+
+function openChatbotModal() {
+  const modal = document.getElementById('chatbotModal');
+  const closeBtn = document.getElementById('chatbotClose');
+  const form = document.getElementById('chatForm');
+  const input = document.getElementById('chatMessageInput');
+  if (!modal || !form || !input) return;
+  modal.classList.add('show');
+  modal.removeAttribute('hidden');
+  trapFocusGeneric(modal, () => closeChatbotModal());
+  const backdrop = modal.querySelector('.modal-backdrop');
+  const close = () => closeChatbotModal();
+  if (backdrop) backdrop.addEventListener('click', close, { once: true });
+  if (closeBtn) closeBtn.addEventListener('click', close, { once: true });
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = input.value.trim();
+    if (!v) return;
+    appendChatMessage('user', v);
+    input.value = '';
+    sendChatMessage(v);
+  }, { once: true });
+}
+
+function closeChatbotModal() {
+  const modal = document.getElementById('chatbotModal');
+  if (!modal) return;
+  modal.classList.add('closing');
+  setTimeout(() => {
+    modal.classList.remove('show');
+    modal.classList.remove('closing');
+    modal.setAttribute('hidden','true');
+  }, 180);
+}

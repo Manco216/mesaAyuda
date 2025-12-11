@@ -54,6 +54,7 @@ button:hover { filter: brightness(0.95); }
 .fab-container { position: fixed; right: 20px; bottom: 20px; z-index: 9999; }
 .fab-secondary { position: absolute; right: 0; bottom: calc(56px + 10px); width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,var(--brand-secondary),var(--brand-accent)); color: #fff; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.22); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; line-height: 1; padding: 0; }
 .fab-secondary:hover { filter: brightness(0.95); }
+.fab-secondary + .fab-secondary { bottom: calc(56px + 86px); }
 .fab-main { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,var(--brand-primary),var(--brand-secondary)); color: #fff; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.25); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 28px; line-height: 1; padding: 0; }
 .fab-main:hover { filter: brightness(0.95); }
 .fab-container.open .fab-main { transform: rotate(45deg); transition: transform .2s ease; }
@@ -417,3 +418,12 @@ body { font-size: var(--base-font-size); }
 body.theme-dark::-webkit-scrollbar { width: 10px; }
 body.theme-dark::-webkit-scrollbar-track { background: #0b1220; }
 body.theme-dark::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+.chat-history { padding: 12px; height: 300px; overflow-y: auto; background: var(--surface-2); border-bottom: 1px solid var(--color-border); }
+.chat-input-row { display: flex; gap: 8px; padding: 10px 14px; }
+.chat-input-row input { flex: 1 1 auto; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--surface); color: var(--color-text); }
+.chat-input-row button { flex: none; }
+.msg { display: inline-block; max-width: 85%; padding: 8px 10px; border-radius: 10px; margin: 6px 0; font-size: 14px; }
+.msg.user { background: #e0f2fe; color: #111827; align-self: flex-end; }
+.msg.bot { background: #ede9fe; color: #111827; align-self: flex-start; }
+#chatbotModal .modal-dialog { width: min(600px, 92vw); min-height: 400px; }
+@media (max-width: 640px) { #chatbotModal .chat-history { height: 50vh; } }

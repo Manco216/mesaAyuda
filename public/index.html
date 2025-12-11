@@ -42,7 +42,7 @@
       <!-- Flechas globales: ahora se renderizan desde main.js para todas las vistas -->
     </template>
     <!-- Plantilla HTML editable del Dashboard -->
-    <template id="dashboards-template">
+      <template id="dashboards-template">
       <!-- Banner interno removido para evitar duplicados; usamos solo el header global -->
       <!-- Flechas globales: ahora se renderizan desde main.js para todas las vistas -->
 
@@ -52,6 +52,9 @@
       <div id="fabContainer" class="fab-container" aria-label="Acciones rápidas" role="group">
         <button id="requestsBtn" class="fab-secondary" aria-label="Peticiones" title="Peticiones">
           <span class="fa fa-list"></span>
+        </button>
+        <button id="chatbotBtn" class="fab-secondary" aria-label="Asistente" title="Asistente">
+          <span class="fa fa-robot"></span>
         </button>
         <button id="fabMain" class="fab-main" aria-label="Opciones" title="Opciones">+</button>
         <div class="fab-menu" aria-hidden="true">
@@ -221,7 +224,26 @@
           </div>
         </div>
       </div>
-    </template>
+
+      <div id="chatbotModal" class="modal" hidden>
+        <div class="modal-backdrop"></div>
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="chatbotTitle">
+          <div class="modal-header">
+            <h2 id="chatbotTitle">Asistente</h2>
+            <div class="modal-header-actions">
+              <button type="button" id="chatbotClose" class="modal-close" aria-label="Cerrar"><span data-lucide="x"></span></button>
+            </div>
+          </div>
+          <div class="modal-content">
+            <div id="chatHistory" class="chat-history" aria-live="polite" role="region" aria-label="Historial de chat"></div>
+            <form id="chatForm" class="chat-input-row" aria-label="Enviar mensaje">
+              <input id="chatMessageInput" type="text" placeholder="Escribe tu mensaje" aria-label="Mensaje" />
+              <button type="submit" id="chatSendBtn" class="modal-add-btn" aria-label="Enviar">Enviar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      </template>
   
     <div id="root"></div>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
