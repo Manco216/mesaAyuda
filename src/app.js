@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -100,7 +100,7 @@ try { window.applyChartDefaults = applyChartDefaults; window.refreshChartsForThe
     // Títulos de tarjetas
     document.querySelectorAll('.grid-stack-item').forEach(el => {
       const type = el.dataset.type;
-      const titleEl = el.querySelector('.card-header span');
+      const titleEl = el.querySelector('.chart-title');
       if (titleEl && type) titleEl.textContent = titleFor(type);
     });
     // Botones FAB
@@ -154,6 +154,19 @@ try { window.applyChartDefaults = applyChartDefaults; window.refreshChartsForThe
         });
       }
     } catch(_) {}
+  }
+
+  function migrateWidgetHeaders() {
+    document.querySelectorAll('.grid-stack-item').forEach(el => {
+      const old = el.querySelector('.card-header');
+      const box = el.querySelector('.chart-box');
+      if (!old || !box) return;
+      old.classList.remove('card-header');
+      old.classList.add('chart-box-header');
+      const span = old.querySelector('span');
+      if (span) span.classList.add('chart-title');
+      box.insertBefore(old, box.firstChild);
+    });
   }
 
   try { window.applyDashboardLanguage = applyDashboardLanguageGlobal; } catch {}
@@ -333,6 +346,7 @@ function initDashboardInternal() {
       renderWhenVisible(box, () => createChart(item.id, t));
       adjustGridHeight();
     });
+    try { migrateWidgetHeaders(); } catch {}
   }
 
   function createWidget(type, id) {
@@ -345,8 +359,9 @@ function initDashboardInternal() {
     inner.className = "grid-stack-item-content";
 
     const header = document.createElement('div');
-    header.className = 'card-header';
+    header.className = 'chart-box-header';
     const headerTitle = document.createElement('span');
+    headerTitle.className = 'chart-title';
     headerTitle.textContent = tr(
       (
         type === 'line' ? 'Gráfica de línea' :
@@ -416,13 +431,16 @@ function initDashboardInternal() {
     });
     headerActions.appendChild(deleteBtn);
     header.appendChild(headerActions);
-    inner.appendChild(header);
 
     const box = document.createElement('div');
     box.className = 'chart-box';
+    box.appendChild(header);
+    const area = document.createElement('div');
+    area.className = 'chart-area';
     const canvas = document.createElement("canvas");
     canvas.id = `${el.dataset.id}-chart`;
-    box.appendChild(canvas);
+    area.appendChild(canvas);
+    box.appendChild(area);
 
     inner.appendChild(box);
     // Renderizar ícono Lucide del botón
@@ -468,9 +486,10 @@ function initDashboardInternal() {
     // Actualizar encabezados de widgets
     document.querySelectorAll('.grid-stack-item').forEach(el => {
       const type = el.dataset.type;
-      const titleEl = el.querySelector('.card-header span');
+      const titleEl = el.querySelector('.chart-title');
       if (titleEl) { titleEl.textContent = titleForType(type); }
     });
+    migrateWidgetHeaders();
     // Actualizar textos de las instancias Chart existentes
     try {
       charts.forEach((chart, id) => {
@@ -748,7 +767,7 @@ function initDashboardInternal() {
     const items = Array.from(grid.el.querySelectorAll('.grid-stack-item'));
     return items.map(el => {
       const id = el.dataset.id; const type = el.dataset.type;
-      const title = el.querySelector('.card-header')?.textContent || 'Widget';
+      const title = el.querySelector('.chart-title')?.textContent || 'Widget';
       return { id, type, title };
     });
   }
@@ -1481,6 +1500,7 @@ function openChartModal(defaultId, previewType) {
   }
 
   // Modal de Peticiones
+  let requestsState = { view: 'my', query: '', all: [], my: [], received: [] };
   function loadRequests() {
     // Fuente dinámica: si existe window.REQUESTS_DATA se usa, si no, ejemplo
     const demo = [
@@ -1498,6 +1518,131 @@ function openChartModal(defaultId, previewType) {
     ];
     const src = Array.isArray(window.REQUESTS_DATA) ? window.REQUESTS_DATA : demo.concat(extra);
     return src;
+  }
+
+  function splitRequests(list) {
+    const my = [];
+    const received = [];
+    const tagOf = (r) => {
+      const v = r && (r.view || r.direction || r.dir || r.tipo || r.category || r.origen || r.source);
+      return (v || '').toString().toLowerCase();
+    };
+    for (let i = 0; i < list.length; i++) {
+      const r = list[i];
+      const tag = tagOf(r);
+      const sent = r && (r.sentByMe === true || r.my === true || tag === 'my' || tag === 'mis' || tag === 'sent' || tag === 'enviadas');
+      const recv = r && (r.received === true || tag === 'received' || tag === 'recibidas' || tag === 'recibida');
+      if (sent) my.push(r);
+      else if (recv) received.push(r);
+      else (i < Math.ceil(list.length / 2) ? my : received).push(r);
+    }
+    return { my, received };
+  }
+
+  function getTextFields(r) {
+    const vals = [r?.objetivo, r?.referencia, r?.equipo, r?.responsable, r?.fecha, r?.estado, r?.remitente, r?.destinatario, r?.autor, r?.de, r?.para, r?.from, r?.to];
+    return vals.filter(Boolean).map(v => v.toString().toLowerCase());
+  }
+
+  function filterRequests(list, q) {
+    const t = (q || '').trim().toLowerCase();
+    if (!t) return list;
+    const tokens = t.split(/\s+/);
+    return list.filter(r => {
+      const vals = getTextFields(r);
+      return tokens.every(tok => vals.some(v => v.includes(tok)));
+    });
+  }
+
+  function collectSuggestions(all) {
+    const map = new Map();
+    const add = (v) => { if (!v) return; const s = v.toString().trim(); if (!s) return; const k = s.toLowerCase(); if (!map.has(k)) map.set(k, s); };
+    for (const r of all) {
+      add(r?.responsable); add(r?.equipo); add(r?.estado); add(r?.fecha); add(r?.objetivo); add(r?.referencia);
+      add(r?.remitente); add(r?.destinatario); add(r?.autor); add(r?.de); add(r?.para); add(r?.from); add(r?.to);
+    }
+    return Array.from(map.values());
+  }
+
+  function updateSuggestionsUI(query) {
+    const el = document.getElementById('requestsSearchSuggestions');
+    if (!el) return;
+    const candidates = collectSuggestions(requestsState.all);
+    const t = (query || '').trim().toLowerCase();
+    const list = t ? candidates.filter(s => s.toLowerCase().includes(t)).slice(0, 8) : [];
+    el.innerHTML = list.map((s, i) => `<li data-index="${i}">${s}</li>`).join('');
+    el.hidden = list.length === 0;
+  }
+
+  function updateRequestsList() {
+    const src = requestsState.view === 'my' ? requestsState.my : requestsState.received;
+    const filtered = filterRequests(src, requestsState.query);
+    renderRequests(filtered);
+  }
+
+  function setRequestsView(view) {
+    const myBtn = document.getElementById('reqTabMy');
+    const recBtn = document.getElementById('reqTabReceived');
+    requestsState.view = view;
+    if (myBtn && recBtn) {
+      if (view === 'my') {
+        myBtn.classList.add('active'); myBtn.setAttribute('aria-selected','true');
+        recBtn.classList.remove('active'); recBtn.setAttribute('aria-selected','false');
+      } else {
+        recBtn.classList.add('active'); recBtn.setAttribute('aria-selected','true');
+        myBtn.classList.remove('active'); myBtn.setAttribute('aria-selected','false');
+      }
+    }
+    updateRequestsList();
+  }
+
+  function setupRequestsSearch() {
+    const input = document.getElementById('requestsSearchInput');
+    const sugg = document.getElementById('requestsSearchSuggestions');
+    if (!input || !sugg) return;
+    if (!input.dataset.inited) {
+      input.addEventListener('input', (e) => {
+        requestsState.query = e.target.value || '';
+        updateSuggestionsUI(requestsState.query);
+        updateRequestsList();
+      });
+      input.addEventListener('keydown', (e) => {
+        const items = Array.from(sugg.querySelectorAll('li'));
+        if (sugg.hidden || items.length === 0) return;
+        let idx = items.findIndex(x => x.classList.contains('active'));
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          idx = Math.min(idx + 1, items.length - 1);
+          items.forEach(x => x.classList.remove('active'));
+          items[idx].classList.add('active');
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          idx = Math.max(idx - 1, 0);
+          items.forEach(x => x.classList.remove('active'));
+          items[idx].classList.add('active');
+        } else if (e.key === 'Enter') {
+          const act = items[idx >= 0 ? idx : 0];
+          if (act) {
+            requestsState.query = act.textContent || '';
+            input.value = requestsState.query;
+            sugg.hidden = true;
+            updateRequestsList();
+          }
+        } else if (e.key === 'Escape') {
+          sugg.hidden = true;
+        }
+      });
+      input.addEventListener('blur', () => { setTimeout(() => { sugg.hidden = true; }, 100); });
+      sugg.addEventListener('click', (e) => {
+        const li = e.target.closest('li');
+        if (!li) return;
+        requestsState.query = li.textContent || '';
+        input.value = requestsState.query;
+        sugg.hidden = true;
+        updateRequestsList();
+      });
+      input.dataset.inited = 'true';
+    }
   }
 
   function badgeClass(estado) {
@@ -1531,14 +1676,16 @@ function openChartModal(defaultId, previewType) {
       </li>
     `).join('');
     el.innerHTML = items;
-    // Delegación de eventos para abrir detalles con clic o teclado
-    el.addEventListener('click', onRequestActivate);
-    el.addEventListener('keydown', (e) => {
-      if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.classList.contains('request-item')) {
-        e.preventDefault();
-        onRequestActivate(e);
-      }
-    });
+    if (!el.dataset.inited) {
+      el.addEventListener('click', onRequestActivate);
+      el.addEventListener('keydown', (e) => {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.classList.contains('request-item')) {
+          e.preventDefault();
+          onRequestActivate(e);
+        }
+      });
+      el.dataset.inited = 'true';
+    }
   }
 
   function attachmentIcon(nameOrUrl) {
@@ -1564,10 +1711,13 @@ function openChartModal(defaultId, previewType) {
             const label = a?.nombre || (tr('Archivo','File')+' '+(i+1));
             const url = a?.url || '#';
             const icon = attachmentIcon(a?.nombre || a?.url || '');
+            const size = typeof a?.size === 'number' ? bytesToSize(a.size) : '';
+            const meta = size ? `<span class="request-meta">${size}</span>` : '';
             return `<li class="attachment-item" role="listitem">
                       <div class="attachment-left">
                         <span class="attachment-icon" aria-hidden="true"><span data-lucide="${icon}"></span></span>
                         <span class="attachment-name">${label}</span>
+                        ${meta}
                       </div>
                       <div class="attachment-actions">
                         <a class="attachment-open-btn" href="${url}" target="_blank" rel="noopener" aria-label="${tr('Abrir adjunto','Open attachment')} ${label}">${tr('Abrir','Open')}</a>
@@ -1575,19 +1725,37 @@ function openChartModal(defaultId, previewType) {
                     </li>`;
           }).join('')}</ul>`
       : `<div class="request-meta">${tr('Sin adjuntos','No attachments')}</div>`;
+    const cat = r.category || r.objetivo || '—';
+    const prio = r.priority || '—';
+    const assign = r.responsable || '—';
+    const time = (r.timeSpent || r.timeSpent === 0) ? r.timeSpent : '—';
+    const dept = r.dept || r.equipo || '—';
+    const user = r.user || '—';
+    const email = r.email || '—';
+    const location = r.location || '—';
+    const phone = r.phone || '—';
     return `
-      <section class="details-section" aria-labelledby="sec-info">
+      <section class="details-section" aria-labelledby="sec-main">
         <div class="details-grid">
-          <div class="details-card"><div id="sec-info" class="details-title">${tr('Información','Information')}</div>
-            <div><strong>${tr('Objetivo:','Objective:')}</strong> ${r.objetivo}</div>
-            <div><strong>${tr('Referencia:','Reference:')}</strong> ${r.referencia}</div>
-            <div><strong>${tr('Equipo:','Team:')}</strong> ${r.equipo}</div>
-            <div><strong>${tr('Responsable:','Owner:')}</strong> ${r.responsable || '—'}</div>
-            <div><strong>${tr('Fecha límite:','Due date:')}</strong> ${r.fecha}</div>
-            <div><strong>${tr('Estado:','Status:')}</strong> <span class="request-badge ${badgeClass(r.estado)}">${statusLabel(r.estado)}</span></div>
+          <div class="details-card" aria-labelledby="sec-contact">
+            <div id="sec-contact" class="details-title">${tr('Información de contacto','Contact information')}</div>
+            <div><strong>${tr('Usuario:','User:')}</strong> ${user}</div>
+            <div><strong>${tr('E‑mail:','E‑mail:')}</strong> ${email}</div>
+            <div><strong>${tr('Departamento:','Department:')}</strong> ${dept}</div>
+            <div><strong>${tr('Ubicación:','Location:')}</strong> ${location}</div>
+            <div><strong>${tr('Teléfono:','Phone:')}</strong> ${phone}</div>
           </div>
-          <div class="details-card" aria-labelledby="sec-notas">
-            <div id="sec-notas" class="details-title">${tr('Notas','Notes')}</div>
+          <div class="details-card" aria-labelledby="sec-class">
+            <div id="sec-class" class="details-title">${tr('Clasificación','Classification')}</div>
+            <div><strong>${tr('Categoría:','Category:')}</strong> ${cat}</div>
+            <div><strong>${tr('Estado:','Status:')}</strong> <span class="request-badge ${badgeClass(r.estado)}">${statusLabel(r.estado)}</span></div>
+            <div><strong>${tr('Prioridad:','Priority:')}</strong> ${prio}</div>
+            <div><strong>${tr('Asignado a:','Assign to:')}</strong> ${assign}</div>
+            <div><strong>${tr('Fecha límite:','Due date:')}</strong> ${r.fecha || '—'}</div>
+            <div><strong>${tr('Tiempo invertido (minutos):','Time spent (minutes):')}</strong> ${time}</div>
+          </div>
+          <div class="details-card" aria-labelledby="sec-prob">
+            <div id="sec-prob" class="details-title">${tr('Información del problema','Problem information')}</div>
             <div>${notas}</div>
           </div>
           <div class="details-card" aria-labelledby="sec-adjuntos">
@@ -1603,8 +1771,9 @@ function openChartModal(defaultId, previewType) {
     const item = e.target.closest('.request-item');
     if (!item) return;
     const idx = Number(item.getAttribute('data-index'));
-    const list = Array.isArray(window.REQUESTS_DATA) ? window.REQUESTS_DATA : loadRequests();
-    const r = list[idx];
+    const base = requestsState.view === 'my' ? requestsState.my : requestsState.received;
+    const current = filterRequests(base, requestsState.query);
+    const r = current[idx];
     if (!r) return;
     const detailsPanel = document.getElementById('requestDetailsPanel');
     const listPanel = document.getElementById('requestsListPanel');
@@ -1658,7 +1827,32 @@ function openChartModal(defaultId, previewType) {
     // Asegurar que todos los textos del dashboard/modales estén en el idioma actual
     try { if (typeof window.applyDashboardLanguage === 'function') window.applyDashboardLanguage(); } catch {}
     const titleEl = document.getElementById('requestsTitle'); if (titleEl) titleEl.textContent = tr('Peticiones','Requests');
-    renderRequests(loadRequests());
+    requestsState.all = loadRequests();
+    const split = splitRequests(requestsState.all);
+    requestsState.my = split.my;
+    requestsState.received = split.received;
+    requestsState.view = 'my';
+    requestsState.query = '';
+    setRequestsView('my');
+    updateSuggestionsUI('');
+    setupRequestsSearch();
+    const myBtn = document.getElementById('reqTabMy');
+    const recBtn = document.getElementById('reqTabReceived');
+    if (myBtn && !myBtn.dataset.inited) { myBtn.addEventListener('click', () => setRequestsView('my')); myBtn.dataset.inited = 'true'; }
+    if (recBtn && !recBtn.dataset.inited) { recBtn.addEventListener('click', () => setRequestsView('received')); recBtn.dataset.inited = 'true'; }
+    const newBtn = document.getElementById('requestNewBtn');
+    if (newBtn && !newBtn.dataset.inited) { newBtn.addEventListener('click', () => openNewRequestForm()); newBtn.dataset.inited = 'true'; }
+    initNewRequestForm();
+    const cancelBtn = document.getElementById('requestNewCancel');
+    if (cancelBtn && !cancelBtn.dataset.inited) {
+      cancelBtn.addEventListener('click', () => { closeNewRequestForm(); resetNewRequestForm(); });
+      cancelBtn.dataset.inited = 'true';
+    }
+    const saveBtn = document.getElementById('requestNewSave');
+    if (saveBtn && !saveBtn.dataset.inited) {
+      saveBtn.addEventListener('click', onSaveNewRequest);
+      saveBtn.dataset.inited = 'true';
+    }
     modal.classList.add('show');
     modal.removeAttribute('hidden');
     trapFocus(modal);
@@ -1677,6 +1871,192 @@ function openChartModal(defaultId, previewType) {
       modal.classList.remove('closing');
       modal.setAttribute('hidden','true');
     }, 180);
+  }
+
+  function formatDateEs(value) {
+    if (!value) return '';
+    const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return String(value);
+    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const yyyy = Number(m[1]);
+    const mm = Number(m[2]);
+    const dd = Number(m[3]);
+    const mon = months[mm - 1] || '';
+    return `${dd} ${mon} ${yyyy}`;
+  }
+
+  function openNewRequestForm() {
+    const panel = document.getElementById('requestNewPanel');
+    const listPanel = document.getElementById('requestsListPanel');
+    const container = document.getElementById('requestsContainer');
+    if (!panel || !listPanel) return;
+    panel.hidden = false;
+    panel.setAttribute('aria-hidden','false');
+    void panel.offsetWidth;
+    panel.classList.add('show');
+    listPanel.classList.add('dimmed');
+    if (container) container.classList.add('overlaying');
+    const first = document.getElementById('reqNewUser');
+    if (first) first.focus();
+  }
+
+  function closeNewRequestForm() {
+    const panel = document.getElementById('requestNewPanel');
+    const listPanel = document.getElementById('requestsListPanel');
+    const container = document.getElementById('requestsContainer');
+    if (!panel || !listPanel) return;
+    panel.classList.remove('show');
+    listPanel.classList.remove('dimmed');
+    panel.setAttribute('aria-hidden','true');
+    panel.hidden = true;
+    if (container) container.classList.remove('overlaying');
+  }
+
+  function resetNewRequestForm() {
+    const ids = ['reqNewUser','reqNewEmail','reqNewDept','reqNewLocation','reqNewPhone','reqNewCategory','reqNewStatus','reqNewPriority','reqNewAssign','reqNewTime','reqNewDescription'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = el.type === 'number' ? '0' : ''; });
+    const files = document.getElementById('reqNewFiles'); if (files) files.value = '';
+    const list = document.getElementById('reqNewFileList'); if (list) list.innerHTML = '';
+    const confirm = document.getElementById('reqNewConfirm'); if (confirm) confirm.checked = false;
+    const status = document.getElementById('requestNewStatus'); if (status) { status.textContent = ''; status.className = 'form-status'; }
+    const errs = document.querySelectorAll('#requestNewForm .field'); errs.forEach(f => f.classList.remove('field-error'));
+    const errTexts = document.querySelectorAll('#requestNewForm .error-text'); errTexts.forEach(e => e.textContent = '');
+  }
+
+  function bytesToSize(bytes) {
+    if (!bytes && bytes !== 0) return '';
+    const k = 1024; const sizes = ['B','KB','MB','GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const v = (bytes / Math.pow(k, i)).toFixed(i ? 1 : 0);
+    return `${v} ${sizes[i]}`;
+  }
+
+  function initNewRequestForm() {
+    const input = document.getElementById('reqNewFiles');
+    const list = document.getElementById('reqNewFileList');
+    const accept = '.docx,.doc,.odt,.rtf,.xlsx,.xls,.csv,.xlsm,.ods,.pdf,.jpg,.jpeg,.png,.gif,.webp,.tiff,.tif,.svg';
+    const MAX_FILE = 10 * 1024 * 1024;
+    const MAX_TOTAL = 50 * 1024 * 1024;
+    if (input && !input.dataset.inited) {
+      input.setAttribute('accept', accept);
+      input.addEventListener('change', () => {
+        if (!list) return;
+        list.innerHTML = '';
+        const files = Array.from(input.files || []);
+        let total = 0;
+        files.forEach((f, i) => {
+          total += f.size || 0;
+          const li = document.createElement('li');
+          li.className = 'file-item';
+          const icon = attachmentIcon(f.name || '');
+          li.innerHTML = `<span class="file-icon" aria-hidden="true"><span data-lucide="${icon}"></span></span><span class="file-name">${f.name}</span><span class="file-meta">${bytesToSize(f.size)}</span>`;
+          list.appendChild(li);
+        });
+        const err = document.getElementById('errFiles');
+        if (err) {
+          if (files.some(f => f.size > MAX_FILE) || total > MAX_TOTAL) {
+            err.textContent = 'Los archivos superan el límite de tamaño';
+          } else { err.textContent = ''; }
+        }
+        if (window.lucide && window.lucide.createIcons) { window.lucide.createIcons(); }
+      });
+      input.dataset.inited = 'true';
+    }
+  }
+
+  function showFieldError(id, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const field = el.closest('.field');
+    const errId = 'err' + id.replace('reqNew','');
+    const err = document.getElementById(errId);
+    if (field) field.classList.add('field-error');
+    if (err) err.textContent = msg || '';
+    el.setAttribute('aria-invalid','true');
+  }
+
+  function clearFieldError(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const field = el.closest('.field');
+    const errId = 'err' + id.replace('reqNew','');
+    const err = document.getElementById(errId);
+    if (field) field.classList.remove('field-error');
+    if (err) err.textContent = '';
+    el.removeAttribute('aria-invalid');
+  }
+
+  function validateNewRequestForm() {
+    const val = (id) => document.getElementById(id)?.value?.trim() || '';
+    const num = (id) => Number(document.getElementById(id)?.value || 0);
+    const requiredIds = ['reqNewUser','reqNewEmail','reqNewDept','reqNewCategory','reqNewStatus','reqNewPriority','reqNewAssign','reqNewDescription'];
+    let ok = true;
+    requiredIds.forEach(id => { clearFieldError(id); if (!val(id)) { showFieldError(id, 'Campo obligatorio'); ok = false; } });
+    const email = val('reqNewEmail');
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFieldError('reqNewEmail','E‑mail inválido'); ok = false; }
+    const time = num('reqNewTime');
+    if (time < 0) { showFieldError('reqNewTime','Debe ser 0 o mayor'); ok = false; }
+    const filesInput = document.getElementById('reqNewFiles');
+    const files = Array.from(filesInput?.files || []);
+    const MAX_FILE = 10 * 1024 * 1024;
+    const MAX_TOTAL = 50 * 1024 * 1024;
+    let total = 0; files.forEach(f => total += f.size || 0);
+    const errF = document.getElementById('errFiles');
+    if (errF) errF.textContent = '';
+    if (files.some(f => f.size > MAX_FILE) || total > MAX_TOTAL) { if (errF) errF.textContent = 'Los archivos superan el límite de tamaño'; ok = false; }
+    const confirm = document.getElementById('reqNewConfirm');
+    const errC = document.getElementById('errConfirm');
+    if (errC) errC.textContent = '';
+    if (!confirm || !confirm.checked) { if (errC) errC.textContent = 'Debes confirmar antes de enviar'; ok = false; }
+    return ok;
+  }
+
+  function onSaveNewRequest() {
+    const status = document.getElementById('requestNewStatus');
+    if (status) { status.textContent = ''; status.className = 'form-status'; }
+    if (!validateNewRequestForm()) { if (status) { status.textContent = 'Corrige los errores del formulario'; status.classList.add('status-error'); } return; }
+    const v = (id) => document.getElementById(id)?.value?.trim() || '';
+    const n = (id) => Number(document.getElementById(id)?.value || 0);
+    const user = v('reqNewUser');
+    const email = v('reqNewEmail');
+    const dept = v('reqNewDept');
+    const location = v('reqNewLocation');
+    const phone = v('reqNewPhone');
+    const category = v('reqNewCategory');
+    const statusVal = v('reqNewStatus');
+    const priority = v('reqNewPriority');
+    const assign = v('reqNewAssign');
+    const timeSpent = n('reqNewTime');
+    const description = v('reqNewDescription');
+    const filesInput = document.getElementById('reqNewFiles');
+    const files = Array.from(filesInput?.files || []);
+    const attachments = files.map(f => ({ nombre: f.name, url: (typeof URL!=='undefined' && URL.createObjectURL ? URL.createObjectURL(f) : '#'), size: f.size }));
+    const today = new Date();
+    const yyyy = today.getFullYear(); const mm = String(today.getMonth()+1).padStart(2,'0'); const dd = String(today.getDate()).padStart(2,'0');
+    const fecha = formatDateEs(`${yyyy}-${mm}-${dd}`);
+    const r = {
+      objetivo: category || 'Nueva petición',
+      referencia: description ? description.slice(0, 80) : '',
+      equipo: dept,
+      responsable: assign,
+      fecha,
+      estado: statusVal,
+      notas: description,
+      adjuntos: attachments,
+      sentByMe: true,
+      user,
+      email,
+      location,
+      phone,
+      priority,
+      timeSpent
+    };
+    requestsState.all = [r, ...requestsState.all];
+    requestsState.my = [r, ...requestsState.my];
+    updateSuggestionsUI('');
+    updateRequestsList();
+    if (status) { status.textContent = 'Petición enviada correctamente'; status.classList.add('status-success'); }
+    setTimeout(() => { closeNewRequestForm(); resetNewRequestForm(); }, 600);
   }
 
   const fab = document.getElementById('fabContainer');
