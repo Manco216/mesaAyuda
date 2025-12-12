@@ -40,30 +40,32 @@
         <div class="calendar-section"><div id="calendar-root"></div></div>
         <div class="tasks-section"><div id="tasks-root"></div></div>
       </div>
+      
+      
     </template>
 
     <!-- Plantilla HTML editable del Dashboard (incluye contenedor de edición) -->
     <template id="dashboards-template">
-      <div id="fabContainer" class="fab-container" aria-label="Acciones rápidas" role="group">
-        <button id="requestsBtn" class="fab-secondary" aria-label="Peticiones" title="Peticiones">
-          <span class="fa fa-list"></span>
-        </button>
-        <button id="fabMain" class="fab-main" aria-label="Opciones" title="Opciones">+</button>
-        <div class="fab-menu" aria-hidden="true">
-          <button id="addLine" class="fab-item" title="Gráfica de línea">L</button>
-          <button id="addBar" class="fab-item" title="Gráfica de barras">B</button>
-          <button id="addPie" class="fab-item" title="Gráfica de pastel">P</button>
-          <button id="addDoughnut" class="fab-item" title="Gráfica de dona">D</button>
-          <button id="addRadar" class="fab-item" title="Gráfica de radar">R</button>
-          <button id="addPolar" class="fab-item" title="Gráfica polar">Q</button>
-          <button id="addHBar" class="fab-item" title="Barras horizontales">H</button>
-          <button id="addArea" class="fab-item" title="Gráfica de área">A</button>
-          <button id="addStacked" class="fab-item" title="Barras apiladas">S</button>
-          <button id="addMixed" class="fab-item" title="Gráfica mixta">M</button>
-          <button id="clear" class="fab-item clear-btn" title="Limpiar">×</button>
+
+  <!-- Modal del chatbot para vista editar -->
+  <div id="chatbotModal" class="modal" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="chatbotTitle">
+      <div class="modal-header">
+        <h2 id="chatbotTitle">Asistente</h2>
+        <div class="modal-header-actions">
+          <button type="button" id="chatbotClose" class="modal-close" aria-label="Cerrar"><span data-lucide="x"></span></button>
         </div>
       </div>
-
+      <div class="modal-content">
+        <div id="chatHistory" class="chat-history" aria-live="polite" role="region" aria-label="Historial de chat"></div>
+        <form id="chatForm" class="chat-input-row" aria-label="Enviar mensaje">
+          <input id="chatMessageInput" type="text" placeholder="Escribe tu mensaje" aria-label="Mensaje" />
+          <button type="submit" id="chatSendBtn" class="modal-add-btn" aria-label="Enviar">Enviar</button>
+        </form>
+      </div>
+    </div>
+  </div>
       <div class="grid-stack"></div>
       <section id="edit-view" class="edit-view" aria-label="Editar configuración" role="region"></section>
 
@@ -283,5 +285,6 @@
     <script src="../src/menu.js?v=20241125-1"></script>
     <script src="../src/app.js?v=20241125-1"></script>
     <script src="../src/main.js?v=20241125-1"></script>
+    <script src="../src/fab.js?v=20241125-1"></script>
   </body>
   </html>

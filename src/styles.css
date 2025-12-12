@@ -54,8 +54,9 @@ button:hover { filter: brightness(0.95); }
 /* botón eliminar del widget */
 /* Eliminado: botón flotante rojo de eliminar */
 .grid-stack-item .ui-resizable-se { right: 10px; left: auto; bottom: 10px; }
-.fab-container { position: fixed; right: 20px; bottom: 10px; z-index: 9999; }
-.fab-secondary { position: absolute; right: 0; bottom: calc(56px + 10px); width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,var(--brand-secondary),var(--brand-accent)); color: #fff; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.22); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; line-height: 1; padding: 0; }
+.fab-container { position: fixed; right: 20px; bottom: 10px; z-index: 9999; pointer-events: none; }
+.fab-container > * { pointer-events: auto; }
+.fab-secondary { position: absolute; right: 0; bottom: calc(56px + 10px); width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,var(--brand-secondary),var(--brand-accent)); color: #fff; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.22); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 22px; line-height: 1; padding: 0; pointer-events: auto; }
 .fab-secondary:hover { filter: brightness(0.95); }
 .fab-secondary + .fab-secondary { bottom: calc(56px + 86px); }
 .fab-secondary#chatbotBtn { bottom: 0; }
@@ -338,6 +339,8 @@ button:hover { filter: brightness(0.95); }
 /* Ocultar banner y botones flotantes en modo edición */
 .editing .header { display: none; }
 .editing .fab-container { display: none; }
+/* Mostrar FAB también en modo edición */
+.editing .fab-container { display: block; }
 
 /* === Estilos del panel Editar === */
 :root {

@@ -15,3 +15,5 @@ Thumbs.db
 # Dist
 dist/
 build/
+
+/vendor/

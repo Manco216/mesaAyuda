@@ -1,0 +1,17 @@
+{
+    "name": "hmanco/planfmesa",
+    "autoload": {
+        "psr-4": {
+            "Hmanco\\Planfmesa\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Antonio",
+            "email": "hernandomanco524@gmail.com"
+        }
+    ],
+    "require": {
+        "guzzlehttp/guzzle": "^7.10"
+    }
+}

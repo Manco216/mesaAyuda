@@ -829,6 +829,27 @@ const render = () => {
 
   // Aplicar traducción después de montar el DOM
   applyLanguage();
+  if (typeof window.ensureFab === 'function') { try { window.ensureFab(); } catch(e){} }
+
+  // FAB global: disponible en todas las vistas
+  (function bindGlobalFab(){
+    const req = document.getElementById('requestsBtn');
+    if (req && !req.dataset.bound) { req.addEventListener('click', () => { try { if (typeof window.openRequestsModal === 'function') window.openRequestsModal(); } catch(e){} }); req.dataset.bound = '1'; }
+    const chat = document.getElementById('chatbotBtn');
+    if (chat && !chat.dataset.bound) { chat.addEventListener('click', () => { try { if (typeof window.openChatbotModal === 'function') window.openChatbotModal(); } catch(e){} }); chat.dataset.bound = '1'; }
+  })();
+
+  // Delegación de eventos como respaldo: asegura acción aunque falle el binding
+  if (!document.__fabDelegationBound) {
+    document.addEventListener('click', (ev) => {
+      const el = ev.target.closest ? ev.target.closest('#requestsBtn, #chatbotBtn') : null;
+      if (!el) return;
+      ev.preventDefault();
+      if (el.id === 'requestsBtn') { try { if (typeof window.openRequestsModal === 'function') window.openRequestsModal(); } catch(_){} }
+      if (el.id === 'chatbotBtn') { try { if (typeof window.openChatbotModal === 'function') window.openChatbotModal(); } catch(_){} }
+    }, true);
+    document.__fabDelegationBound = true;
+  }
 
   if (state.activePage === 'dashboard' && window.initDashboard) {
     try { window.initDashboard(); } catch (e) { console.warn('Init dashboard error:', e); }

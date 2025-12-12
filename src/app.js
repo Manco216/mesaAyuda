@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -1820,8 +1820,23 @@ function openChartModal(defaultId, previewType) {
     setTimeout(() => { (first || modal).focus(); }, 0);
   }
 
+  function ensureRequestsModal() {
+    try { console.debug('Peticiones: ensureRequestsModal()'); } catch (_) {}
+    let modal = document.getElementById('requestsModal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'requestsModal';
+    modal.className = 'modal';
+    modal.setAttribute('hidden','true');
+    modal.innerHTML = '<div class="modal-backdrop"></div><div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="requestsTitle"><div class="modal-header"><h2 id="requestsTitle">Peticiones</h2><div class="modal-header-actions"><button type="button" id="requestsClose" class="modal-close" aria-label="Cerrar"><span data-lucide="x"></span></button></div></div><div class="modal-content"><div class="requests-container" id="requestsContainer"><div class="requests-topbar" role="toolbar" aria-label="Navegación de peticiones"><div class="tabs" role="tablist"><button id="reqTabMy" class="tab-btn active" role="tab" aria-selected="true">Mis Peticiones</button><button id="reqTabReceived" class="tab-btn" role="tab" aria-selected="false">Peticiones Recibidas</button></div><div class="search-row" role="search"><div class="search-input-wrap"><input id="requestsSearchInput" type="text" placeholder="Buscar" aria-label="Buscar peticiones" autocomplete="off" /><ul id="requestsSearchSuggestions" class="search-suggestions" hidden aria-label="Sugerencias"></ul></div><button id="requestNewBtn" type="button" class="modal-add-btn" aria-label="Nueva petición">Nueva petición</button></div></div><div id="requestsListPanel" class="requests-panel"><ul id="requestsList" class="requests-list" aria-live="polite" aria-label="Lista de peticiones"></ul></div><div id="requestDetailsPanel" class="requests-panel details" hidden aria-hidden="true" aria-labelledby="requestDetailsTitle" role="region"><div class="details-header"><h3 id="requestDetailsTitle">Detalle de petición</h3><nav class="details-breadcrumb" aria-label="Miga de pan"><span>Peticiones</span><span class="sep">›</span><span>Detalle</span></nav><button type="button" id="requestDetailsBack" class="modal-secondary-btn" aria-label="Volver a la lista">Volver</button></div><div id="requestDetailsContent" class="details-content" aria-live="polite"></div></div><div id="requestNewPanel" class="requests-panel details" hidden aria-hidden="true" aria-labelledby="requestNewTitle" role="region"><div class="details-header"><h3 id="requestNewTitle">Nueva petición</h3><nav class="details-breadcrumb" aria-label="Miga de pan"><span>Peticiones</span><span class="sep">›</span><span>Nueva</span></nav><div class="details-actions"><button type="button" id="requestNewCancel" class="modal-secondary-btn" aria-label="Cancelar">Cancelar</button><button type="button" id="requestNewSave" class="modal-add-btn" aria-label="Guardar">Guardar</button></div></div><div id="requestNewContent" class="details-content" aria-live="polite"><div id="requestNewStatus" class="form-status" aria-live="polite"></div><form id="requestNewForm" class="request-form" aria-label="Formulario de nueva petición"><section class="details-section" aria-labelledby="sec-contact"><div class="details-title" id="sec-contact">Información de contacto</div><div class="form-grid"><div class="field"><label for="reqNewUser">Usuario<span aria-hidden="true">*</span></label><input id="reqNewUser" type="text" aria-required="true" /><div class="error-text" id="errUser"></div></div><div class="field"><label for="reqNewEmail">E‑mail<span aria-hidden="true">*</span></label><input id="reqNewEmail" type="email" placeholder="@socya.org.co" aria-required="true" /><div class="error-text" id="errEmail"></div></div><div class="field"><label for="reqNewDept">Departamento<span aria-hidden="true">*</span></label><select id="reqNewDept" aria-required="true"><option value="">Seleccione</option><option>Marketing</option><option>Compras</option><option>Diseño</option><option>TI</option><option>RRHH</option></select><div class="error-text" id="errDept"></div></div><div class="field"><label for="reqNewLocation">Ubicación</label><input id="reqNewLocation" type="text" /><div class="error-text" id="errLocation"></div></div><div class="field"><label for="reqNewPhone">Teléfono</label><input id="reqNewPhone" type="tel" /><div class="error-text" id="errPhone"></div></div></div></section><section class="details-section" aria-labelledby="sec-class"><div class="details-title" id="sec-class">Clasificación</div><div class="form-grid"><div class="field"><label for="reqNewCategory">Categoría<span aria-hidden="true">*</span></label><select id="reqNewCategory" aria-required="true"><option value="">Seleccione</option><option>General</option><option>Soporte</option><option>Finanzas</option><option>Operaciones</option></select><div class="error-text" id="errCategory"></div></div><div class="field"><label for="reqNewStatus">Estado<span aria-hidden="true">*</span></label><select id="reqNewStatus" aria-required="true"><option value="">Seleccione</option><option>Solicitado</option><option>En curso</option><option>Bloqueado</option><option>Culminado</option><option>Bajo revisión</option></select><div class="error-text" id="errStatus"></div></div><div class="field"><label for="reqNewPriority">Prioridad<span aria-hidden="true">*</span></label><select id="reqNewPriority" aria-required="true"><option value="">Seleccione</option><option>Baja</option><option>Media</option><option>Alta</option><option>Crítica</option></select><div class="error-text" id="errPriority"></div></div><div class="field"><label for="reqNewAssign">Asignar a<span aria-hidden="true">*</span></label><select id="reqNewAssign" aria-required="true"><option value="">Seleccione</option><option>Hernando Antonio</option><option>Rafael Urbina</option><option>Equipo de TI</option></select><div class="error-text" id="errAssign"></div></div><div class="field"><label for="reqNewTime">Tiempo invertido (minutos)</label><input id="reqNewTime" type="number" min="0" step="1" value="0" /><div class="error-text" id="errTime"></div></div></div></section><section class="details-section" aria-labelledby="sec-problem"><div class="details-title" id="sec-problem">Información del problema</div><div class="field"><label for="reqNewDescription">Descripción<span aria-hidden="true">*</span></label><textarea id="reqNewDescription" rows="6" aria-required="true" placeholder="Describe el problema"></textarea><div class="error-text" id="errDescription"></div></div></section><section class="details-section" aria-labelledby="sec-files"><div class="details-title" id="sec-files">Adjuntos</div><div class="field"><input id="reqNewFiles" type="file" multiple /><div class="file-hint">Formatos: .docx, .doc, .odt, .rtf, .xlsx, .xls, .csv, .xlsm, .ods, .pdf, .jpg, .jpeg, .png, .gif, .webp, .tiff, .tif, .svg. Máx por archivo: 10MB, total: 50MB.</div><ul id="reqNewFileList" class="file-list" aria-live="polite"></ul><div class="error-text" id="errFiles"></div></div></section><section class="details-section" aria-label="Confirmación"><div class="field"><label class="checkbox-row"><input id="reqNewConfirm" type="checkbox" /> <span>No enviar correo al usuario</span></label><div class="error-text" id="errConfirm"></div></div></section></form></div></div></div></div></div>';
+    document.body.appendChild(modal);
+    if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch {} }
+    return modal;
+  }
+
   function openRequestsModal() {
-    const modal = document.getElementById('requestsModal');
+    try { console.debug('Peticiones: openRequestsModal()'); } catch (_) {}
+    const modal = ensureRequestsModal();
     const closeBtn = document.getElementById('requestsClose');
     if (!modal) return;
     // Asegurar que todos los textos del dashboard/modales estén en el idioma actual
@@ -1855,6 +1870,10 @@ function openChartModal(defaultId, previewType) {
     }
     modal.classList.add('show');
     modal.removeAttribute('hidden');
+    try {
+      modal.style.display = 'flex';
+      modal.style.visibility = 'visible';
+    } catch (_) {}
     trapFocus(modal);
     const backdrop = modal.querySelector('.modal-backdrop');
     const close = () => closeRequestsModal();
@@ -2120,7 +2139,13 @@ function openChartModal(defaultId, previewType) {
   onFabAction("clear", () => { grid.removeAll(); adjustGridHeight(); localStorage.removeItem(STORAGE_KEY); });
 }
 window.initDashboard = initDashboardInternal;
-document.addEventListener("DOMContentLoaded", initDashboardInternal);
+document.addEventListener("DOMContentLoaded", () => {
+  try {
+    const hasGrid = !!document.querySelector('.grid-stack');
+    const libsReady = !!(window.GridStack && window.Chart);
+    if (hasGrid && libsReady) { initDashboardInternal(); }
+  } catch (e) { /* noop */ }
+});
 
 function trapFocusGeneric(modal, onEsc) {
   const focusables = modal.querySelectorAll('button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
@@ -2151,17 +2176,23 @@ async function sendChatMessage(text) {
   let data = null, ok = false, status = 0;
   try {
     const sessionId = getChatSessionId();
-    const memoryPayload = { 
-      nodes: [ { parameters: { contextWindowLength: 15 }, type: '@n8n/n8n-nodes-langchain.memoryBufferWindow', typeVersion: 1.3, position: [6944, 1568], id: '0c79fe87-e356-41b0-b2ce-8299557b2d96', name: 'Simple Memory1' } ],
-      connections: { 'Simple Memory1': { ai_memory: [ [] ] } },
-      pinData: {},
-      meta: { templateCredsSetupCompleted: true, instanceId: '01a7d86cd60aa5ad6a79b3966c762b4026878cfbcdf18bf8e52d2bcf5a38ce9f' }
-    };
-    const payload = { sessionId, message: text, memory: memoryPayload };
-    const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Accept': 'text/plain, application/json',
+        'X-Session-Id': sessionId
+      },
+      body: text
+    });
     status = resp.status; ok = resp.ok;
     const ct = resp.headers.get('content-type') || '';
-    if (ct.includes('application/json')) data = await resp.json(); else data = await resp.text();
+    if (ct.includes('application/json')) {
+      try { data = await resp.json(); }
+      catch { try { data = await resp.text(); } catch { data = ''; } }
+    } else {
+      try { data = await resp.text(); } catch { data = ''; }
+    }
   } catch (e) { data = String(e || 'Error'); }
   const reply = typeof data === 'object' ? (data.reply || data.message || JSON.stringify(data)) : String(data);
   const msg = ok ? reply : ('Error ' + status + ': ' + reply);
@@ -2169,8 +2200,21 @@ async function sendChatMessage(text) {
   saveChatMessage('bot', msg);
 }
 
+function ensureChatbotModal() {
+  let modal = document.getElementById('chatbotModal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.id = 'chatbotModal';
+  modal.className = 'modal';
+  modal.setAttribute('hidden','true');
+  modal.innerHTML = '<div class="modal-backdrop"></div><div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="chatbotTitle"><div class="modal-header"><h2 id="chatbotTitle">Asistente</h2><div class="modal-header-actions"><button type="button" id="chatbotClose" class="modal-close" aria-label="Cerrar"><span data-lucide="x"></span></button></div></div><div class="modal-content"><div id="chatHistory" class="chat-history" aria-live="polite" role="region" aria-label="Historial de chat"></div><form id="chatForm" class="chat-input-row" aria-label="Enviar mensaje"><input id="chatMessageInput" type="text" placeholder="Escribe tu mensaje" aria-label="Mensaje" /><button type="submit" id="chatSendBtn" class="modal-add-btn" aria-label="Enviar">Enviar</button></form></div></div>';
+  document.body.appendChild(modal);
+  if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch {} }
+  return modal;
+}
+
 function openChatbotModal() {
-  const modal = document.getElementById('chatbotModal');
+  const modal = ensureChatbotModal();
   const closeBtn = document.getElementById('chatbotClose');
   const form = document.getElementById('chatForm');
   const input = document.getElementById('chatMessageInput');
@@ -2246,3 +2290,8 @@ function restoreChatHistory() {
     box.scrollTop = box.scrollHeight;
   } catch {}
 }
+
+try { window.openRequestsModal = openRequestsModal; } catch {}
+try { window.openChatbotModal = openChatbotModal; } catch {}
+try { window.ensureRequestsModal = ensureRequestsModal; } catch {}
+try { window.ensureChatbotModal = ensureChatbotModal; } catch {}
