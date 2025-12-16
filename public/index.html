@@ -198,16 +198,22 @@
             <div class="form-field">
               <label for="cfgClosedState">Estado cerrado</label>
               <select id="cfgClosedState">
+                <option value="solicitado">Solicitado</option>
+                <option value="en_tramite">En tramite</option>
+                <option value="en_cotizacion">En cotizacion</option>
+                <option value="esperando_aprobacion">Esperando aprobacion</option>
+                <option value="solicitado_proveedor">Solicitado al proveedor</option>
+                <option value="en_espera_usuario">En espera de usuario</option>
                 <option value="solucionado">Solucionado</option>
-                <option value="cancelado">Cancelado</option>
+                <option value="cerrado_sin_solucion">Cerrado sin solucion</option>
               </select>
             </div>
             <div class="form-field">
               <label for="cfgAuthType">Tipo de autenticación</label>
               <select id="cfgAuthType">
                 <option value="nt">NT Authentication</option>
-                <option value="basic">Basic</option>
-                <option value="oauth">OAuth</option>
+                <option value="database">Database</option>
+                <option value="external">External Authentication</option>
               </select>
             </div>
             <div class="form-field">
@@ -234,6 +240,33 @@
             <div class="form-field">
               <label for="cfgMaxImage">Tamaño máximo de la imagen</label>
               <input id="cfgMaxImage" type="number" min="1" step="1" placeholder="100000">
+            </div>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-change-pass-template">
+      <section class="admin-config" aria-label="Cambiar la contraseña del administrador">
+        <header class="admin-config-header">
+          <h2>Cambiar la contraseña del administrador</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="save-pass"><span data-lucide="save"></span><span>Grabar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="changeAdminPassForm" novalidate>
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="adminPassCurrent">Contraseña actual</label>
+              <input id="adminPassCurrent" type="password" autocomplete="current-password" placeholder="">
+            </div>
+            <div class="form-field">
+              <label for="adminPassNew">Nueva contraseña</label>
+              <input id="adminPassNew" type="password" autocomplete="new-password" placeholder="">
+            </div>
+            <div class="form-field">
+              <label for="adminPassConfirm">Confirme la contraseña</label>
+              <input id="adminPassConfirm" type="password" autocomplete="new-password" placeholder="">
             </div>
           </div>
         </form>

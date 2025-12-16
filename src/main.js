@@ -46,6 +46,21 @@ const state = {
   },
 };
 
+const ADMA_PASS_KEY = 'socya:admaPass';
+const loadAdminPass = () => {
+  try {
+    const v = localStorage.getItem(ADMA_PASS_KEY);
+    return v && v.length ? v : 'admin';
+  } catch (_) {
+    return 'admin';
+  }
+};
+const saveAdminPass = (pwd) => {
+  try {
+    localStorage.setItem(ADMA_PASS_KEY, String(pwd || 'admin'));
+  } catch (_) {}
+};
+
 // ----- Configuración desde index.html -----
 let uiConfig = null;
 const getUiConfig = () => {
@@ -943,6 +958,10 @@ const render = () => {
         const cfgTpl = getTemplateHTML('adma-config-template');
         if (cfgTpl) return cfgTpl;
         return `<section class="admin-config"><h2>Configuración</h2><p>Formulario de configuración no disponible.</p></section>`;
+      } else if (state.admaView === 'changePass') {
+        const passTpl = getTemplateHTML('adma-change-pass-template');
+        if (passTpl) return passTpl;
+        return `<section class="admin-config"><h2>Cambiar la contraseña del administrador</h2></section>`;
       } else {
         const tpl = getTemplateHTML('adma-template');
         if (tpl) return tpl;
@@ -1023,7 +1042,8 @@ const render = () => {
     if (submit && !submit.dataset.bound) {
       submit.addEventListener('click', () => {
         const v = input ? (input.value || '').trim() : '';
-        if (v === 'admin') {
+        const expected = loadAdminPass();
+        if (v === expected) {
           state.showAdmaAuth = false;
           state.activePage = 'adma';
           render();
@@ -1080,6 +1100,31 @@ const render = () => {
         saveBtn.dataset.bound = '1';
       }
       renderIcons();
+    } else if (state.admaView === 'changePass') {
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const saveBtn = document.querySelector('.admin-config [data-action="save-pass"]');
+      if (backBtn && !backBtn.dataset.bound) {
+        backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); });
+        backBtn.dataset.bound = '1';
+      }
+      if (saveBtn && !saveBtn.dataset.bound) {
+        saveBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const cur = (document.getElementById('adminPassCurrent')?.value || '').trim();
+          const next = (document.getElementById('adminPassNew')?.value || '').trim();
+          const conf = (document.getElementById('adminPassConfirm')?.value || '').trim();
+          const expected = loadAdminPass();
+          if (cur !== expected) { alert(tr('Contraseña actual incorrecta','Current password incorrect')); return; }
+          if (!next || next.length < 4) { alert(tr('La nueva contraseña es muy corta','New password too short')); return; }
+          if (next !== conf) { alert(tr('Las contraseñas no coinciden','Passwords do not match')); return; }
+          saveAdminPass(next);
+          alert(tr('Contraseña actualizada','Password updated'));
+          state.admaView = null;
+          render();
+        });
+        saveBtn.dataset.bound = '1';
+      }
+      renderIcons();
     } else {
       document.querySelectorAll('.admin-item').forEach(btn => {
         if (btn.dataset.bound) return;
@@ -1098,6 +1143,10 @@ const render = () => {
                 window.location.hash = '#sysinfo';
               }
             } catch(_) {}
+            return;
+          } else if (act === 'change-admin-pass') {
+            state.admaView = 'changePass';
+            render();
             return;
           }
           try {
