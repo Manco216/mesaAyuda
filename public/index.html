@@ -26,6 +26,12 @@
         <a href="https://drive.google.com/file/d/1YnlgdMOOAyz80l8D66bHhvPe0jNTkq5W/view" class="sidebar-item" target="_blank" rel="noopener"><span class="sidebar-icon" data-lucide="shield"></span><span>Política de seguridad</span></a>
         <a href="#" class="sidebar-item" data-page="documents"><span class="sidebar-icon" data-lucide="folder-open"></span><span>Documentos de operaciones TI</span></a>
       </nav>
+      <div class="sidebar-footer">
+        <button id="admaButton" type="button" class="sidebar-item adma-btn">
+          <span class="sidebar-icon" data-lucide="rocket"></span>
+          <span>ADMA</span>
+        </button>
+      </div>
     </template>
     <!-- Plantilla HTML editable del banner -->
     <template id="header-template">
@@ -41,6 +47,197 @@
       
       <!-- Flechas globales: ahora se renderizan desde main.js para todas las vistas -->
       
+    </template>
+    <template id="adma-template">
+      <section class="admin-menu" aria-label="Menú administrativo">
+        <header class="admin-menu-header">
+          <h2>Menú administrativo</h2>
+        </header>
+        <div class="admin-menu-grid">
+          <button type="button" class="admin-item" data-action="config-site">
+            <span class="admin-icon" data-lucide="settings"></span>
+            <span>Configurar Sitio</span>
+          </button>
+          <button type="button" class="admin-item" data-action="test-config">
+            <span class="admin-icon" data-lucide="check-circle-2"></span>
+            <span>Probar configuración</span>
+          </button>
+          <button type="button" class="admin-item" data-action="config-mail">
+            <span class="admin-icon" data-lucide="mail"></span>
+            <span>Configurar Mensajes de correo</span>
+          </button>
+          <button type="button" class="admin-item" data-action="change-admin-pass">
+            <span class="admin-icon" data-lucide="key-round"></span>
+            <span>Cambiar la contraseña del administrador</span>
+          </button>
+          <button type="button" class="admin-item" data-action="manage-users">
+            <span class="admin-icon" data-lucide="users"></span>
+            <span>Administrar Usuarios</span>
+          </button>
+          <button type="button" class="admin-item" data-action="manage-categories">
+            <span class="admin-icon" data-lucide="tags"></span>
+            <span>Administrar Categorías</span>
+          </button>
+          <button type="button" class="admin-item" data-action="manage-departments">
+            <span class="admin-icon" data-lucide="building-2"></span>
+            <span>Administrar Departamentos</span>
+          </button>
+          <button type="button" class="admin-item" data-action="manage-priorities">
+            <span class="admin-icon" data-lucide="list-checks"></span>
+            <span>Administrar Prioridades</span>
+          </button>
+          <button type="button" class="admin-item" data-action="manage-states">
+            <span class="admin-icon" data-lucide="workflow"></span>
+            <span>Administrar Estados</span>
+          </button>
+          <button type="button" class="admin-item" data-action="reports">
+            <span class="admin-icon" data-lucide="file-bar-chart"></span>
+            <span>Reportes</span>
+          </button>
+        </div>
+      </section>
+    </template>
+    <template id="adma-config-template">
+      <section class="admin-config" aria-label="Configuración del sitio">
+        <header class="admin-config-header">
+          <h2>Configuración</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="save"><span data-lucide="save"></span><span>Guardar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="siteConfigForm" novalidate>
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="cfgSiteName">Nombre del sitio</label>
+              <input id="cfgSiteName" type="text" placeholder="">
+            </div>
+            <div class="form-field">
+              <label for="cfgBaseUrl">Base URL</label>
+              <input id="cfgBaseUrl" type="url" placeholder="https://">
+            </div>
+            <div class="form-field">
+              <label for="cfgAdminName">Nombre del administrador</label>
+              <input id="cfgAdminName" type="text" placeholder="">
+            </div>
+            <div class="form-field">
+              <label for="cfgAdminEmail">Correo del administrador</label>
+              <input id="cfgAdminEmail" type="email" placeholder="soporte@socya.org.co">
+            </div>
+            <div class="form-field">
+              <label for="cfgBaseEmail">Correo base</label>
+              <input id="cfgBaseEmail" type="email" placeholder="@socya.org.co">
+            </div>
+            <div class="form-field">
+              <label for="cfgMailType">Tipo de correo</label>
+              <select id="cfgMailType">
+                <option value="disabled">Disabled</option>
+                <option value="cdonts">CDONTS</option>
+                <option value="jmail">JMail</option>
+                <option value="aspemail">ASPEmail</option>
+                <option value="aspmail">ASPMail</option>
+                <option value="cdosys" selected>CDOSYS</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgSmtp">Servidor SMTP</label>
+              <input id="cfgSmtp" type="text" placeholder="192.168.2.8">
+            </div>
+            <div class="form-field">
+              <label for="cfgLocatorPriority">Nivel de prioridad del localizador</label>
+              <select id="cfgLocatorPriority">
+                <option value="disabled">Deshabilitado</option>
+                <option value="high">Alta</option>
+                <option value="medium">Media</option>
+                <option value="low">Baja</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgNotifyUser">Enviar un correo al usuario cuando haya actualizaciones</label>
+              <select id="cfgNotifyUser">
+                <option value="si">SI</option>
+                <option value="no">NO</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgKnowledgeAccess">Habilitar al usuario la base de conocimientos</label>
+              <select id="cfgKnowledgeAccess">
+                <option value="disable">Deshabilitar</option>
+                <option value="representatives">Solo representantes</option>
+                <option value="users_representatives">Usuarios/representantes</option>
+                <option value="any">Cualquiera</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgKnowledgeSql">Búsquedas complejas por SQL a la base de conocimientos</label>
+              <select id="cfgKnowledgeSql">
+                <option value="disable">Deshabilitar</option>
+                <option value="enable">Habilitar</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgDefaultPriority">Prioridad por omisión</label>
+              <select id="cfgDefaultPriority">
+                <option value="low">Baja</option>
+                <option value="medium">Media</option>
+                <option value="high">Alta</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgDefaultState">Estado por omisión</label>
+              <select id="cfgDefaultState">
+                <option value="solicitado">Solicitado</option>
+                <option value="en_tramite">En tramite</option>
+                <option value="en_cotizacion">En cotizacion</option>
+                <option value="esperando_aprobacion">Esperando aprobacion</option>
+                <option value="solicitado_proveedor">Solicitado al proveedor</option>
+                <option value="en_espera_usuario">En espera de usuario</option>
+                <option value="cerrado_sin_solucion">Cerrado sin solucion</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgClosedState">Estado cerrado</label>
+              <select id="cfgClosedState">
+                <option value="solucionado">Solucionado</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgAuthType">Tipo de autenticación</label>
+              <select id="cfgAuthType">
+                <option value="nt">NT Authentication</option>
+                <option value="basic">Basic</option>
+                <option value="oauth">OAuth</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgUserSelection">Use selección de usuario</label>
+              <select id="cfgUserSelection">
+                <option value="no">NO</option>
+                <option value="si">SI</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgInOutBoard">Usar tablero In/Out</label>
+              <select id="cfgInOutBoard">
+                <option value="no">NO</option>
+                <option value="si">SI</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgAllowImage">Permitir cargar imagen</label>
+              <select id="cfgAllowImage">
+                <option value="no">NO</option>
+                <option value="si">SI</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cfgMaxImage">Tamaño máximo de la imagen</label>
+              <input id="cfgMaxImage" type="number" min="1" step="1" placeholder="100000">
+            </div>
+          </div>
+        </form>
+      </section>
     </template>
     <!-- Plantilla HTML editable del Dashboard removida de index -->
 

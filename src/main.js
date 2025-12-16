@@ -21,6 +21,10 @@ const state = {
   fpModalSolution: null,
   fpModalMeeting: null,
   welcomeAnimatedShown: false,
+  showAdmaAuth: false,
+  admaPassword: '',
+  admaView: null,
+  siteConfig: {},
   // Estado de colapso del menú lateral (inicia oculto hasta que el usuario haga clic)
   sidebarCollapsed: true,
   // Preferencias de interfaz y usuario
@@ -199,6 +203,24 @@ const getCategoryLabel = (category) => ({
   expiring: tr('Por vencer','Expiring'),
   recent: tr('Reciente','Recent'),
 }[category] || tr('Otro','Other'));
+
+const passwordStrength = (pwd) => {
+  const s = (pwd || '').trim();
+  let score = 0;
+  if (s.length >= 8) score++;
+  if (/[A-Z]/.test(s)) score++;
+  if (/[a-z]/.test(s)) score++;
+  if (/\d/.test(s)) score++;
+  if (/[^A-Za-z0-9]/.test(s)) score++;
+  return Math.min(score, 4);
+};
+const passwordStrengthLabel = (score) => {
+  if (score <= 1) return tr('Débil','Weak');
+  if (score === 2) return tr('Media','Medium');
+  if (score === 3) return tr('Fuerte','Strong');
+  return tr('Muy fuerte','Very strong');
+};
+const openAdmaAuth = () => { state.showAdmaAuth = true; state.admaPassword = ''; render(); };
 
 // Resuelve rutas de assets para funcionar desde /public/index.html y desde servidor
 const resolveAsset = (relativePath) => {
@@ -916,6 +938,17 @@ const renderDashboards = () => '';
 const render = () => {
   const root = document.getElementById('root');
   const pageContent = (() => {
+    if (state.activePage === 'adma') {
+      if (state.admaView === 'config') {
+        const cfgTpl = getTemplateHTML('adma-config-template');
+        if (cfgTpl) return cfgTpl;
+        return `<section class="admin-config"><h2>Configuración</h2><p>Formulario de configuración no disponible.</p></section>`;
+      } else {
+        const tpl = getTemplateHTML('adma-template');
+        if (tpl) return tpl;
+        return `<div class="planning-layout"><div class="calendar-section"><h2>ADMA</h2><p>Acceso administrativo</p></div></div>`;
+      }
+    }
     if (state.activePage === 'planning') {
       const tpl = getTemplateHTML('planning-template');
       if (tpl) return tpl;
@@ -934,6 +967,24 @@ const render = () => {
       </div>
     </div>
     ${state.showModal ? renderEventModal() : ''}
+    ${state.showAdmaAuth ? `
+      <div id="admaAuth" class="auth-modal show" role="dialog" aria-modal="true" aria-labelledby="admaAuthTitle">
+        <div class="auth-backdrop"></div>
+        <div class="auth-dialog">
+          <div class="auth-header">
+            <span class="auth-icon" data-lucide="lock-keyhole"></span>
+            <h2 id="admaAuthTitle">Acceso administrativo</h2>
+            <button type="button" id="admaClose" class="auth-close" aria-label="Cerrar"><span data-lucide="x"></span></button>
+          </div>
+          <div class="auth-body">
+            <label for="admaPassword">Contraseña</label>
+            <input id="admaPassword" type="password" autocomplete="current-password" placeholder="${tr('Ingresa la contraseña','Enter password')}" aria-describedby="admaError" aria-invalid="false" />
+            <div id="admaError" class="auth-error" aria-live="polite"></div>
+            <button type="button" id="admaSubmit" class="auth-submit" disabled>${tr('Continuar','Continue')}</button>
+          </div>
+        </div>
+      </div>
+    ` : ''}
   `;
 
   // Re-inicializar el componente de menú tras cada render
@@ -950,7 +1001,106 @@ const render = () => {
   // Aplicar traducción después de montar el DOM
   applyLanguage();
   if (typeof window.ensureFab === 'function') { try { window.ensureFab(); } catch(e){} }
+  if (state.showAdmaAuth) {
+    const input = document.getElementById('admaPassword');
+    const err = document.getElementById('admaError');
+    const submit = document.getElementById('admaSubmit');
+    const close = document.getElementById('admaClose');
+    const update = () => {
+      const v = input ? (input.value || '') : '';
+      const hasVal = v.trim().length > 0;
+      if (submit) submit.disabled = !hasVal;
+      if (err) { err.textContent = ''; }
+      if (input) input.setAttribute('aria-invalid', 'false');
+    };
+    if (input && !input.dataset.bound) {
+      input.addEventListener('input', update);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && submit && !submit.disabled) submit.click(); });
+      input.dataset.bound = '1';
+      update();
+      try { input.focus(); } catch(_) {}
+    }
+    if (submit && !submit.dataset.bound) {
+      submit.addEventListener('click', () => {
+        const v = input ? (input.value || '').trim() : '';
+        if (v === 'admin') {
+          state.showAdmaAuth = false;
+          state.activePage = 'adma';
+          render();
+        } else {
+          if (input) input.setAttribute('aria-invalid', 'true');
+          if (err) { err.textContent = tr('Acceso denegado','Access denied'); }
+        }
+      });
+      submit.dataset.bound = '1';
+    }
+    if (close && !close.dataset.bound) {
+      close.addEventListener('click', () => { state.showAdmaAuth = false; render(); });
+      close.dataset.bound = '1';
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.showAdmaAuth) { state.showAdmaAuth = false; render(); } });
+  }
 
+  if (state.activePage === 'adma') {
+    if (state.admaView === 'config') {
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const saveBtn = document.querySelector('.admin-config [data-action="save"]');
+      if (backBtn && !backBtn.dataset.bound) {
+        backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); });
+        backBtn.dataset.bound = '1';
+      }
+      if (saveBtn && !saveBtn.dataset.bound) {
+        saveBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const val = (id) => (document.getElementById(id)?.value || '').trim();
+          state.siteConfig = {
+            siteName: val('cfgSiteName'),
+            baseUrl: val('cfgBaseUrl'),
+            adminName: val('cfgAdminName'),
+            adminEmail: val('cfgAdminEmail'),
+            baseEmail: val('cfgBaseEmail'),
+            mailType: val('cfgMailType'),
+            smtpServer: val('cfgSmtp'),
+            locatorPriority: val('cfgLocatorPriority'),
+            notifyUserUpdates: val('cfgNotifyUser'),
+            knowledgeAccess: val('cfgKnowledgeAccess'),
+            knowledgeSql: val('cfgKnowledgeSql'),
+            defaultPriority: val('cfgDefaultPriority'),
+            defaultState: val('cfgDefaultState'),
+            closedState: val('cfgClosedState'),
+            authType: val('cfgAuthType'),
+            userSelection: val('cfgUserSelection'),
+            inOutBoard: val('cfgInOutBoard'),
+            allowImage: val('cfgAllowImage'),
+            maxImageSize: val('cfgMaxImage'),
+          };
+          try { localStorage.setItem('socya:siteConfig', JSON.stringify(state.siteConfig)); } catch(_) {}
+          alert(tr('Configuración guardada','Settings saved'));
+        });
+        saveBtn.dataset.bound = '1';
+      }
+      renderIcons();
+    } else {
+      document.querySelectorAll('.admin-item').forEach(btn => {
+        if (btn.dataset.bound) return;
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const act = btn.dataset.action;
+          if (act === 'config-site') {
+            state.admaView = 'config';
+            render();
+            return;
+          }
+          try {
+            console.log('Admin action:', act);
+            alert(tr('Acción administrativa pendiente','Administrative action pending'));
+          } catch(_) {}
+        });
+        btn.dataset.bound = '1';
+      });
+      renderIcons();
+    }
+  }
   const headerBtn = document.getElementById('header-profile');
   const headerMenu = document.getElementById('header-menu');
   if (headerBtn && headerMenu && !headerBtn.dataset.bound) {
@@ -1031,6 +1181,15 @@ const render = () => {
     }, true);
     document.__fabDelegationBound = true;
   }
+  if (!document.__admaDelegationBound) {
+    document.addEventListener('click', (ev) => {
+      const el = ev.target.closest ? ev.target.closest('#admaButton') : null;
+      if (!el) return;
+      ev.preventDefault();
+      openAdmaAuth();
+    }, true);
+    document.__admaDelegationBound = true;
+  }
 
   if (state.activePage === 'dashboard' && window.initDashboard) {
     try { window.initDashboard(); } catch (e) { console.warn('Init dashboard error:', e); }
@@ -1074,6 +1233,14 @@ const render = () => {
       collapseSidebarOnNavigate();
     });
   });
+  const admaBtn = document.getElementById('admaButton');
+  if (admaBtn && !admaBtn.dataset.bound) {
+    admaBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openAdmaAuth();
+    });
+    admaBtn.dataset.bound = '1';
+  }
 
   const avatarImgs = document.querySelectorAll('.sidebar-footer .avatar');
   const fileInput = document.getElementById('avatar-file-input');
