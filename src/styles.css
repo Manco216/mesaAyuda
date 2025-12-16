@@ -546,3 +546,11 @@ body.theme-dark::-webkit-scrollbar-thumb { background: #334155; border-radius: 1
 .msg.bot { background: #ede9fe; color: #111827; align-self: flex-start; }
 #chatbotModal .modal-dialog { width: min(600px, 92vw); min-height: 400px; }
 @media (max-width: 640px) { #chatbotModal .chat-history { height: 50vh; } }
+#sysInfoModal .modal-dialog { height: 85vh; }
+#sysInfoModal .modal-content { padding: 14px; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+#sysInfoModal .sys-title { font-weight: 700; margin-bottom: 8px; }
+#sysInfoModal .sys-section { margin-bottom: 16px; }
+#sysInfoModal .sys-table { width: 100%; border-collapse: collapse; }
+#sysInfoModal .sys-table th, #sysInfoModal .sys-table td { border: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; font-size: 0.92rem; }
+#sysInfoModal .sys-table th { background: #eef2ff; width: 240px; }
+#sysInfoModal .sys-pre { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.9rem; }

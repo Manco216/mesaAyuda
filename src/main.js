@@ -1090,6 +1090,15 @@ const render = () => {
             state.admaView = 'config';
             render();
             return;
+          } else if (act === 'test-config') {
+            try {
+              if (typeof window.openSysInfoModal === 'function') {
+                window.openSysInfoModal();
+              } else {
+                window.location.hash = '#sysinfo';
+              }
+            } catch(_) {}
+            return;
           }
           try {
             console.log('Admin action:', act);
@@ -1407,9 +1416,11 @@ const render = () => {
       const wantsCatalog = (hash === '#customize' || search.includes('openCatalog=1'));
       const wantsRequests = (hash === '#requests' || search.includes('openRequests=1'));
       const wantsChatbot = (hash === '#chatbot' || search.includes('openChatbot=1'));
+      const wantsSysInfo = (hash === '#sysinfo' || search.includes('openSysInfo=1'));
       if (wantsCatalog) { document.getElementById('fabMain')?.click(); }
       if (wantsRequests) { try { if (typeof window.openRequestsModal === 'function') window.openRequestsModal(); } catch(_){} }
       if (wantsChatbot) { try { if (typeof window.openChatbotModal === 'function') window.openChatbotModal(); } catch(_){} }
+      if (wantsSysInfo) { try { if (typeof window.openSysInfoModal === 'function') window.openSysInfoModal(); } catch(_){} }
     } catch(_) {}
   }
 

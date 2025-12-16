@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -2018,7 +2018,7 @@ function openChartModal(defaultId, previewType) {
       menuView = document.createElement('div');
       menuView.id = 'requestsMenuView';
       menuView.className = 'requests-view show';
-      menuView.innerHTML = '<div class="requests-menu"><button id="rqMenuNew" class="menu-item" type="button"><span class="icon" data-lucide="file-plus"></span><span>Nueva solicitud</span></button><button id="rqMenuMy" class="menu-item" type="button"><span class="icon" data-lucide="user"></span><span>Mis solicitudes</span></button><button id="rqMenuProcess" class="menu-item" type="button"><span class="icon" data-lucide="workflow"></span><span>Pendientes del proceso</span></button><button id="rqMenuClosed" class="menu-item" type="button"><span class="icon" data-lucide="lock"></span><span>Cerrados</span></button><button id="rqMenuSearch" class="menu-item" type="button"><span class="icon" data-lucide="search"></span><span>Buscar solicitudes</span></button><button id="rqMenuEdit" class="menu-item" type="button"><span class="icon" data-lucide="pencil"></span><span>Editar información</span></button></div><div class="menu-section"><div class="menu-title">Buscar en la base de conocimiento</div><div class="menu-actions"><input id="rqKbInput" class="menu-input" type="text" placeholder="ID" /><button id="rqKbBtn" type="button" class="modal-add-btn">Buscar</button></div></div><div class="menu-section"><div class="menu-title">Ver problemas por usuario</div><div class="menu-actions"><select id="rqUserSelect" class="menu-select"><option value="hmanco">hmanco</option></select><button id="rqUserViewBtn" type="button" class="menu-view-btn">Ver</button></div></div>';
+      menuView.innerHTML = '<div class="requests-menu"><button id="rqMenuNew" class="menu-item" type="button"><span class="icon" data-lucide="file-plus"></span><span>Nueva solicitud</span></button><button id="rqMenuMy" class="menu-item" type="button"><span class="icon" data-lucide="user"></span><span>Mis solicitudes</span></button><button id="rqMenuProcess" class="menu-item" type="button"><span class="icon" data-lucide="workflow"></span><span>Pendientes del proceso</span></button><button id="rqMenuClosed" class="menu-item" type="button"><span class="icon" data-lucide="lock"></span><span>Cerrados</span></button><button id="rqMenuSearch" class="menu-item" type="button"><span class="icon" data-lucide="search"></span><span>Buscar solicitudes</span></button><button id="rqMenuEdit" class="menu-item" type="button"><span class="icon" data-lucide="pencil"></span><span>Editar información</span></button><button id="rqMenuSys" class="menu-item" type="button"><span class="icon" data-lucide="server"></span><span>Test configuration</span></button></div><div class="menu-section"><div class="menu-title">Buscar en la base de conocimiento</div><div class="menu-actions"><input id="rqKbInput" class="menu-input" type="text" placeholder="ID" /><button id="rqKbBtn" type="button" class="modal-add-btn">Buscar</button></div></div><div class="menu-section"><div class="menu-title">Ver problemas por usuario</div><div class="menu-actions"><select id="rqUserSelect" class="menu-select"><option value="hmanco">hmanco</option></select><button id="rqUserViewBtn" type="button" class="menu-view-btn">Ver</button></div></div>';
       content.appendChild(menuView);
       if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch {} }
       const showMenu = () => {
@@ -2182,6 +2182,7 @@ function openChartModal(defaultId, previewType) {
       const btnClosed = document.getElementById('rqMenuClosed'); if (btnClosed && !btnClosed.dataset.inited) { btnClosed.addEventListener('click', () => { applyOption('closed'); }); btnClosed.dataset.inited = 'true'; }
       const btnSearch = document.getElementById('rqMenuSearch'); if (btnSearch && !btnSearch.dataset.inited) { btnSearch.addEventListener('click', () => { applyOption('search'); }); btnSearch.dataset.inited = 'true'; }
       const btnEdit = document.getElementById('rqMenuEdit'); if (btnEdit && !btnEdit.dataset.inited) { btnEdit.addEventListener('click', () => { applyOption('edit'); }); btnEdit.dataset.inited = 'true'; }
+      const btnSys = document.getElementById('rqMenuSys'); if (btnSys && !btnSys.dataset.inited) { btnSys.addEventListener('click', () => { try { openSysInfoModal(); } catch(_){} }); btnSys.dataset.inited = 'true'; }
       const kbBtn = document.getElementById('rqKbBtn'); if (kbBtn && !kbBtn.dataset.inited) { kbBtn.addEventListener('click', () => { const vEl = document.getElementById('rqKbInput'); const v = vEl && vEl.value ? String(vEl.value).trim() : ''; applyOption('kb'); if (v) { requestsState.query = v; updateSuggestionsUI(requestsState.query); updateRequestsList(); } }); kbBtn.dataset.inited = 'true'; }
       const viewBtn = document.getElementById('rqUserViewBtn'); if (viewBtn && !viewBtn.dataset.inited) { viewBtn.addEventListener('click', () => { const sel = document.getElementById('rqUserSelect'); const val = sel && sel.value ? String(sel.value).trim() : ''; applyOption('user'); if (val) { requestsState.query = val; updateSuggestionsUI(requestsState.query); updateRequestsList(); } }); viewBtn.dataset.inited = 'true'; }
     }
@@ -2754,3 +2755,160 @@ try { window.openRequestsModal = openRequestsModal; } catch {}
 try { window.openChatbotModal = openChatbotModal; } catch {}
 try { window.ensureRequestsModal = ensureRequestsModal; } catch {}
 try { window.ensureChatbotModal = ensureChatbotModal; } catch {}
+
+function maskSensitive(label, value) {
+  const k = String(label).toLowerCase();
+  if (k.includes('password') || k.includes('authorization') || k.includes('cookie')) {
+    return value ? '••••••••' : '';
+  }
+  return value;
+}
+
+function ensureSysInfoModal() {
+  let modal = document.getElementById('sysInfoModal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.id = 'sysInfoModal';
+  modal.className = 'modal';
+  modal.setAttribute('hidden','true');
+  modal.innerHTML = '<div class="modal-backdrop"></div><div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="sysInfoTitle"><div class="modal-header"><h2 id="sysInfoTitle">System Information</h2><div class="modal-header-actions"><button type="button" id="sysInfoClose" class="modal-close" aria-label="Cerrar"><span data-lucide="x"></span></button></div></div><div class="modal-content"><div id="sysInfoRoot"></div></div></div>';
+  document.body.appendChild(modal);
+  if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch {} }
+  return modal;
+}
+
+function openSysInfoModal() {
+  const modal = ensureSysInfoModal();
+  const closeBtn = document.getElementById('sysInfoClose');
+  const root = document.getElementById('sysInfoRoot');
+  if (!modal || !root) return;
+  const info = window.SYSTEM_INFO_DATA || {
+    application: [
+      ['DBType','1'],
+      ['SQLServer','RESPETO\\APLICACIONES'],
+      ['SQLDBase','HelpDesk'],
+      ['AccessPath','C:\\Inetpub\\Databases\\helpdesk2000.mdb'],
+      ['DNS_Name','HelpDeskDSN']
+    ],
+    verifyDb: [
+      ['DB Connection','Good'],
+      ['Access .MDB Exists','Database does not exist.'],
+      ['Update DB','Good']
+    ],
+    config: [
+      ['BaseURL','https://fundacion.socya.org/helpdesk'],
+      ['EmailType','5'],
+      ['SMTPServer','192.168.2.8'],
+      ['EnablePager','3'],
+      ['AuthType','1'],
+      ['Version','0.97'],
+      ['UseInOutBoard','0'],
+      ['KBFreeText','1']
+    ],
+    serverVars: [
+      ['APPL_MD_PATH','/LM/W3SVC/1/ROOT/Helpdesk'],
+      ['APPL_PHYSICAL_PATH','C:\\inetpub\\wwwroot\\Helpdesk\\'],
+      ['AUTH_PASSWORD','D1gital25+'],
+      ['AUTH_TYPE','Basic'],
+      ['AUTH_USER','hmanco'],
+      ['CERT_COOKIE',''],
+      ['CERT_FLAGS',''],
+      ['CERT_ISSUER',''],
+      ['CERT_KEYSIZE','256'],
+      ['CERT_SECRETKEYSIZE','2048'],
+      ['CERT_SERIALNUMBER',''],
+      ['CERT_SERVER_ISSUER','C=US, O=DigiCert Inc, OU=www.digicert.com, CN=RapidSSL TLS RSA CA G1'],
+      ['CERT_SERVER_SUBJECT','CN=*.socya.org'],
+      ['CERT_SUBJECT',''],
+      ['CONTENT_LENGTH','0'],
+      ['CONTENT_TYPE',''],
+      ['GATEWAY_INTERFACE','CGI/1.1'],
+      ['HTTPS','on'],
+      ['HTTPS_KEYSIZE','256'],
+      ['HTTPS_SECRETKEYSIZE','2048'],
+      ['HTTPS_SERVER_ISSUER','C=US, O=DigiCert Inc, OU=www.digicert.com, CN=RapidSSL TLS RSA CA G1'],
+      ['HTTPS_SERVER_SUBJECT','CN=*.socya.org'],
+      ['INSTANCE_ID','1'],
+      ['INSTANCE_META_PATH','/LM/W3SVC/1'],
+      ['LOCAL_ADDR','192.168.2.22'],
+      ['LOGON_USER','hmanco'],
+      ['PATH_INFO','/helpdesk/admin/sysinfo.asp'],
+      ['PATH_TRANSLATED','C:\\inetpub\\wwwroot\\Helpdesk\\admin\\sysinfo.asp'],
+      ['QUERY_STRING',''],
+      ['REMOTE_ADDR','192.168.101.160'],
+      ['REMOTE_HOST','192.168.101.160'],
+      ['REMOTE_USER','hmanco'],
+      ['REQUEST_METHOD','GET'],
+      ['SCRIPT_NAME','/helpdesk/admin/sysinfo.asp'],
+      ['SERVER_NAME','fundacion.socya.org'],
+      ['SERVER_PORT','443'],
+      ['SERVER_PORT_SECURE','1'],
+      ['SERVER_PROTOCOL','HTTP/1.1'],
+      ['SERVER_SOFTWARE','Microsoft-IIS/8.5'],
+      ['URL','/helpdesk/admin/sysinfo.asp'],
+      ['HTTP_CACHE_CONTROL','no-cache'],
+      ['HTTP_CONNECTION','keep-alive'],
+      ['HTTP_PRAGMA','no-cache'],
+      ['HTTP_ACCEPT','text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'],
+      ['HTTP_ACCEPT_ENCODING','gzip, deflate, br, zstd'],
+      ['HTTP_ACCEPT_LANGUAGE','es-419,es;q=0.9'],
+      ['HTTP_AUTHORIZATION','Basic aG1hbmNvOkQxZ2l0YWwyNSs='],
+      ['HTTP_COOKIE','AspxAutoDetectCookieSupport=1; ASPSESSIONIDCUCSDACC=MNIJKJKAOJFDJMNHFMCHDHPA; ASPSESSIONIDCUDRBCCD=AEOBNMMAGKBFAGLGGIJLCICF'],
+      ['HTTP_HOST','fundacion.socya.org'],
+      ['HTTP_REFERER','https://fundacion.socya.org/helpdesk/admin/test.asp?doit=1'],
+      ['HTTP_USER_AGENT','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'],
+      ['HTTP_SEC_CH_UA','"Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"'],
+      ['HTTP_SEC_CH_UA_MOBILE','?0'],
+      ['HTTP_SEC_CH_UA_PLATFORM','"Windows"'],
+      ['HTTP_UPGRADE_INSECURE_REQUESTS','1'],
+      ['HTTP_SEC_FETCH_SITE','same-origin'],
+      ['HTTP_SEC_FETCH_MODE','navigate'],
+      ['HTTP_SEC_FETCH_USER','?1'],
+      ['HTTP_SEC_FETCH_DEST','document']
+    ],
+    raw: {
+      ALL_HTTP: 'HTTP_CACHE_CONTROL:no-cache\nHTTP_CONNECTION:keep-alive\nHTTP_PRAGMA:no-cache\nHTTP_ACCEPT:text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7\nHTTP_ACCEPT_ENCODING:gzip, deflate, br, zstd\nHTTP_ACCEPT_LANGUAGE:es-419,es;q=0.9\nHTTP_AUTHORIZATION:Basic aG1hbmNvOkQxZ2l0YWwyNSs=\nHTTP_COOKIE:AspxAutoDetectCookieSupport=1; ASPSESSIONIDCUCSDACC=MNIJKJKAOJFDJMNHFMCHDHPA; ASPSESSIONIDCUDRBCCD=AEOBNMMAGKBFAGLGGIJLCICF\nHTTP_HOST:fundacion.socya.org\nHTTP_REFERER:https://fundacion.socya.org/helpdesk/admin/test.asp?doit=1\nHTTP_USER_AGENT:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36\nHTTP_SEC_CH_UA:"Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"\nHTTP_SEC_CH_UA_MOBILE:?0\nHTTP_SEC_CH_UA_PLATFORM:"Windows"\nHTTP_UPGRADE_INSECURE_REQUESTS:1\nHTTP_SEC_FETCH_SITE:same-origin\nHTTP_SEC_FETCH_MODE:navigate\nHTTP_SEC_FETCH_USER:?1\nHTTP_SEC_FETCH_DEST:document',
+      ALL_RAW: 'Cache-Control: no-cache\nConnection: keep-alive\nPragma: no-cache\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7\nAccept-Encoding: gzip, deflate, br, zstd\nAccept-Language: es-419,es;q=0.9\nAuthorization: Basic aG1hbmNvOkQxZ2l0YWwyNSs=\nCookie: AspxAutoDetectCookieSupport=1; ASPSESSIONIDCUCSDACC=MNIJKJKAOJFDJMNHFMCHDHPA; ASPSESSIONIDCUDRBCCD=AEOBNMMAGKBFAGLGGIJLCICF\nHost: fundacion.socya.org\nReferer: https://fundacion.socya.org/helpdesk/admin/test.asp?doit=1\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36\nsec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"\nsec-ch-ua-mobile: ?0\nsec-ch-ua-platform: "Windows"\nUpgrade-Insecure-Requests: 1\nSec-Fetch-Site: same-origin\nSec-Fetch-Mode: navigate\nSec-Fetch-User: ?1\nSec-Fetch-Dest: document'
+    }
+  };
+  const section = (title, rows) => {
+    const safe = (s) => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const trs = rows.map(([k,v]) => `<tr><th>${safe(k)}</th><td>${safe(maskSensitive(k, v))}</td></tr>`).join('');
+    return `<div class="sys-section"><div class="sys-title">${title}</div><table class="sys-table" aria-label="${title}"><tbody>${trs}</tbody></table></div>`;
+  };
+  const toRowsFromRaw = (text) => {
+    return String(text||'').split(/\n+/).map(line => {
+      const idx = line.indexOf(':');
+      if (idx !== -1) { return [line.slice(0, idx), line.slice(idx+1).trim()]; }
+      return [line, ''];
+    }).filter(([k]) => k && k.trim().length > 0);
+  };
+  root.innerHTML = [
+    section('Application Variable', info.application),
+    section('Verify DB', info.verifyDb),
+    section('Config Settings', info.config),
+    section('Server Variable', info.serverVars),
+    section('ALL_HTTP', toRowsFromRaw(info.raw.ALL_HTTP)),
+    section('ALL_RAW', toRowsFromRaw(info.raw.ALL_RAW))
+  ].join('');
+  modal.classList.add('show');
+  modal.removeAttribute('hidden');
+  const backdrop = modal.querySelector('.modal-backdrop');
+  const close = () => closeSysInfoModal();
+  if (backdrop) backdrop.addEventListener('click', close, { once: true });
+  if (closeBtn) closeBtn.addEventListener('click', close, { once: true });
+}
+
+function closeSysInfoModal() {
+  const modal = document.getElementById('sysInfoModal');
+  if (!modal) return;
+  modal.classList.add('closing');
+  setTimeout(() => {
+    modal.classList.remove('show');
+    modal.classList.remove('closing');
+    modal.setAttribute('hidden','true');
+    try { modal.style.display = ''; modal.style.visibility = ''; } catch(_){}
+  }, 180);
+}
+
+try { window.openSysInfoModal = openSysInfoModal; } catch {}
