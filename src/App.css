@@ -222,7 +222,7 @@ button {
 /* ==================== HEADER ==================== */
 .header {
   background: none;
-  padding: 1.25rem;
+  padding: 0.75rem 1.25rem 1.25rem;
   margin-bottom: 0;
 }
 
@@ -230,6 +230,29 @@ button {
   max-width: 1400px;
   margin: 0 auto;
 }
+
+.header-bar { position: relative; display: flex; justify-content: flex-end; align-items: center; width: 100%; min-height: 48px; background: var(--surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 8px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-top: 0; margin-bottom: 0.75rem; }
+.header-profile-btn { background: none; border: none; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.header-avatar { width: 36px; height: 36px; border-radius: 999px; object-fit: cover; border: 1px solid var(--color-border); }
+.header-profile-btn:hover .header-avatar { box-shadow: 0 0 0 2px var(--color-border); }
+.header-menu { position: absolute; right: 8px; top: calc(100% + 6px); background: #fff; border: 1px solid var(--color-border); border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.12); min-width: 220px; padding: 8px; z-index: 20; opacity: 0; transform: translateY(-6px) scale(0.98); transition: opacity 180ms ease, transform 180ms ease; }
+.header-menu.show { opacity: 1; transform: translateY(0) scale(1); }
+.header-menu[hidden] { display: none; }
+.header-menu-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: none; border: none; color: var(--color-text); padding: 8px 10px; border-radius: 10px; cursor: pointer; font-size: 0.95rem; font-weight: 500; line-height: 1.15; }
+.header-menu-item:hover, .header-menu-item:focus-visible { background: #f3f4f6; outline: none; }
+.header-menu-item .menu-icon { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; }
+.header-menu-item span:last-child { margin-left: 0; }
+/* Unificar estilo entre anchors y botones dentro del menú */
+.header-menu a.header-menu-item,
+.header-menu a.header-menu-item:hover,
+.header-menu a.header-menu-item:focus,
+.header-menu a.header-menu-item:active,
+.header-menu a.header-menu-item:visited { text-decoration: none; color: inherit; }
+/* Variante de cerrar sesión en rojo */
+.header-menu-item.logout { color: #ef4444; }
+.header-menu-item.logout:hover,
+.header-menu-item.logout:focus-visible { background: #fee2e2; color: #b91c1c; }
+@media (max-width: 480px) { .header-menu { left: 8px; right: 8px; min-width: auto; } }
 
 .welcome-box {
   position: relative;
@@ -1166,7 +1189,7 @@ button {
   margin-top: 15px;
   width: 100%;
   height: 48px;
-  display: block;
+  display: none !important;
   box-sizing: border-box;
   border-radius: 12px;
   background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));

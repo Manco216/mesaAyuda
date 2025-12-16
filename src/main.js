@@ -27,12 +27,18 @@ const state = {
   preferences: {
     name: '',
     surname: '',
+    email: '',
+    phone: '',
+    location: '',
+    departmentName: '',
     department: 'ti',
     language: 'es',
     theme: 'light',
     fontSize: 16,
     palette: null,
     avatar: null,
+    notifyEmail: true,
+    weeklyReminders: false,
   },
 };
 
@@ -318,18 +324,21 @@ const renderEditView = () => {
   return `
     <div class="edit-panel" aria-label="Panel de configuración">
       <div class="edit-grid">
-        <section>
+        <div class="edit-card">
           <h2>${t('userConfig')}</h2>
-          <div class="edit-field">
-            <label for="edit-name">${t('name')}</label>
-            <input id="edit-name" type="text" autocomplete="given-name" value="${p.name || ''}" placeholder="${t('namePh')}">
-            <div class="edit-error" id="err-name">${t('nameHint')}</div>
+          <div class="edit-grid">
+            <div class="edit-field">
+              <label for="edit-name">${t('name')}</label>
+              <input id="edit-name" type="text" autocomplete="given-name" value="${p.name || ''}" placeholder="${t('namePh')}">
+              <div class="edit-error" id="err-name">${t('nameHint')}</div>
+            </div>
+            <div class="edit-field">
+              <label for="edit-surname">${t('surname')}</label>
+              <input id="edit-surname" type="text" autocomplete="family-name" value="${p.surname || ''}" placeholder="${t('surnamePh')}">
+              <div class="edit-error" id="err-surname">${t('surnameHint')}</div>
+            </div>
           </div>
-          <div class="edit-field">
-            <label for="edit-surname">${t('surname')}</label>
-            <input id="edit-surname" type="text" autocomplete="family-name" value="${p.surname || ''}" placeholder="${t('surnamePh')}">
-            <div class="edit-error" id="err-surname">${t('surnameHint')}</div>
-          </div>
+        <div class="edit-grid">
           <div class="edit-field">
             <label for="edit-dept">${t('department')}</label>
             <select id="edit-dept">
@@ -344,17 +353,61 @@ const renderEditView = () => {
             </select>
             <div class="edit-hint">${t('languageHint')}</div>
           </div>
-          <div class="edit-field" style="grid-column: 1 / -1; text-align:right">
-            <button id="btn-save-user" type="button">${t('save')}</button>
+        </div>
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label for="edit-phone">Número de teléfono</label>
+            <input id="edit-phone" type="tel" autocomplete="tel" value="${p.phone || ''}" placeholder="">
           </div>
-        </section>
-        <section>
+          <div class="edit-field">
+            <label for="edit-location">Ubicación</label>
+            <select id="edit-location">
+              ${LOCATIONS.map(l => `<option value="${l.id}" ${p.location===l.id?'selected':''}>${locationLabel(l.id)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="edit-grid">
+          <div class="edit-field" style="grid-column: 1 / -1">
+            <label for="edit-dept-name">Departamento</label>
+            <select id="edit-dept-name">
+              ${ORG_DEPT_NAMES.map(d => `<option value="${d.id}" ${p.departmentName===d.id?'selected':''}>${orgDeptLabel(d.id)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+          <div class="edit-field">
+            <label>Foto de perfil</label>
+            <div class="photo-row">
+              <img id="edit-avatar-preview" class="avatar-preview" src="${p.avatar || resolveAsset('img/Usuario1.png')}" alt="Avatar" />
+              <div class="photo-actions">
+                <button type="button" id="btn-upload-photo" class="photo-btn upload">Subir foto</button>
+                <button type="button" id="btn-remove-photo" class="photo-btn remove">Quitar foto</button>
+              </div>
+              <input id="edit-avatar-file" type="file" accept="image/*" hidden />
+            </div>
+          </div>
+          <div class="section-subtitle">Cambiar contraseña</div>
+          <div class="edit-grid two">
+            <div class="edit-field">
+              <label for="edit-pass-current">Contraseña actual</label>
+              <input id="edit-pass-current" type="password" autocomplete="current-password" placeholder="••••••••">
+            </div>
+            <div class="edit-field">
+              <label for="edit-pass-new">Nueva contraseña</label>
+              <input id="edit-pass-new" type="password" autocomplete="new-password" placeholder="••••••••">
+              <div class="edit-hint">Mínimo 8 caracteres.</div>
+            </div>
+          </div>
+          <div class="edit-field" style="grid-column: 1 / -1; text-align:right">
+            <button id="btn-save-user" type="button" class="edit-save-btn">${t('save')}</button>
+          </div>
+        </div>
+        <div class="edit-card">
           <h2>${t('palettes')}</h2>
           <div id="palette-list">
             ${PALETTES.map(pal => `
               <div class="palette-card" data-id="${pal.id}">
                 <div class="palette-swatches">
-                  ${pal.swatches.map(c => `<div style="background:${c}" title="${c}"></div>`).join('')}
+                  ${pal.swatches.map(c => `<div style=\"background:${c}\" title=\"${c}\"></div>`).join('')}
                 </div>
                 <div class="palette-actions">
                   <button class="preview" data-action="preview">${t('preview')}</button>
@@ -364,28 +417,26 @@ const renderEditView = () => {
             `).join('')}
           </div>
           <div class="edit-hint">${t('logoHint')}</div>
-        </section>
-      </div>
-      <section style="margin-top:16px">
-        <h2>${t('uiPrefs')}</h2>
-        <div class="edit-grid">
-          <div class="edit-field">
-            <label for="toggle-theme">${t('mode')}</label>
-            <select id="toggle-theme">
-              <option value="light" ${p.theme==='light'?'selected':''}>${t('light')}</option>
-              <option value="dark" ${p.theme==='dark'?'selected':''}>${t('dark')}</option>
-            </select>
-          </div>
-          <div class="edit-field">
-            <label for="font-size">${t('fontSize')}</label>
-            <input id="font-size" type="range" min="12" max="24" value="${p.fontSize || 16}">
-            <div class="edit-hint">${p.fontSize || 16}px</div>
-          </div>
-          <div class="edit-field" style="grid-column: 1 / -1">
-            <button id="btn-reset" type="button">${t('reset')}</button>
+          <h2 style="margin-top:16px">${t('uiPrefs')}</h2>
+          <div class="edit-grid">
+            <div class="edit-field">
+              <label for="toggle-theme">${t('mode')}</label>
+              <select id="toggle-theme">
+                <option value="light" ${p.theme==='light'?'selected':''}>${t('light')}</option>
+                <option value="dark" ${p.theme==='dark'?'selected':''}>${t('dark')}</option>
+              </select>
+            </div>
+            <div class="edit-field">
+              <label for="font-size">${t('fontSize')}</label>
+              <input id="font-size" type="range" min="12" max="24" value="${p.fontSize || 16}">
+              <div class="edit-hint">${p.fontSize || 16}px</div>
+            </div>
+            <div class="edit-field" style="grid-column: 1 / -1">
+              <button id="btn-reset" type="button">${t('reset')}</button>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   `;
 };
@@ -404,6 +455,37 @@ const initEditView = () => {
   };
   bindText('edit-name','err-name','name');
   bindText('edit-surname','err-surname','surname');
+  const phone = document.getElementById('edit-phone'); if (phone) phone.addEventListener('input', () => { state.preferences.phone = phone.value.trim(); savePrefs(); });
+  const location = document.getElementById('edit-location'); if (location) location.addEventListener('change', () => { state.preferences.location = location.value; savePrefs(); });
+  const deptName = document.getElementById('edit-dept-name'); if (deptName) deptName.addEventListener('change', () => { state.preferences.departmentName = deptName.value; savePrefs(); });
+  (function bindAvatarEdit(){
+    const upload = document.getElementById('btn-upload-photo');
+    const remove = document.getElementById('btn-remove-photo');
+    const file = document.getElementById('edit-avatar-file');
+    const preview = document.getElementById('edit-avatar-preview');
+    if (upload && file) upload.addEventListener('click', () => { try { file.value = ''; file.click(); } catch(_) {} });
+    if (file) file.addEventListener('change', () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      const maxSize = 4 * 1024 * 1024;
+      if (f.size > maxSize) { alert(state.preferences.language==='en' ? 'Image too large (max 4MB).' : 'Imagen muy pesada (máximo 4MB).'); return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result;
+        if (!dataUrl || typeof dataUrl !== 'string') return;
+        state.preferences.avatar = dataUrl; savePrefs();
+        document.querySelectorAll('.header-avatar').forEach(el => { el.src = dataUrl; });
+        if (preview) preview.src = dataUrl;
+      };
+      reader.readAsDataURL(f);
+    });
+    if (remove) remove.addEventListener('click', () => {
+      state.preferences.avatar = null; savePrefs();
+      const def = resolveAsset('img/Usuario1.png');
+      document.querySelectorAll('.header-avatar').forEach(el => { el.src = def; });
+      if (preview) preview.src = def;
+    });
+  })();
   // Departamento
   const dept = document.getElementById('edit-dept'); if (dept) dept.addEventListener('change', () => { state.preferences.department = dept.value; savePrefs(); });
   // Idioma
@@ -426,9 +508,11 @@ const lang = document.getElementById('edit-lang'); if (lang) lang.addEventListen
   // Tema y tamaño
   const toggleTheme = document.getElementById('toggle-theme'); if (toggleTheme) toggleTheme.addEventListener('change', () => { state.preferences.theme = toggleTheme.value; savePrefs(); applyPrefs(); });
   const fontSize = document.getElementById('font-size'); const fontHint = fontSize ? fontSize.nextElementSibling : null; if (fontSize) fontSize.addEventListener('input', () => { state.preferences.fontSize = Number(fontSize.value); if (fontHint) fontHint.textContent = `${fontSize.value}px`; applyPrefs(); savePrefs(); });
+  const prefNotify = document.getElementById('pref-notify-email'); if (prefNotify) prefNotify.addEventListener('change', () => { state.preferences.notifyEmail = !!prefNotify.checked; savePrefs(); });
+  const prefWeekly = document.getElementById('pref-weekly'); if (prefWeekly) prefWeekly.addEventListener('change', () => { state.preferences.weeklyReminders = !!prefWeekly.checked; savePrefs(); });
   // Reset
   const btnReset = document.getElementById('btn-reset'); if (btnReset) btnReset.addEventListener('click', () => {
-    state.preferences = { name:'', surname:'', department:'ti', language:'es', theme:'light', fontSize:16, palette:null, avatar:null };
+    state.preferences = { name:'', surname:'', email:'', phone:'', location:'', departmentName:'', department:'ti', language:'es', theme:'light', fontSize:16, palette:null, avatar:null, notifyEmail:true, weeklyReminders:false };
     savePrefs(); applyPrefs(); applyLanguage(); render();
     const el = document.getElementById('edit-view'); if (el) { el.innerHTML = renderEditView(); initEditView(); renderIcons(); }
   });
@@ -441,6 +525,9 @@ const lang = document.getElementById('edit-lang'); if (lang) lang.addEventListen
       const sn = document.getElementById('edit-surname');
       const dept = document.getElementById('edit-dept');
       const langSel = document.getElementById('edit-lang');
+      const phoneEl = document.getElementById('edit-phone');
+      const locationEl = document.getElementById('edit-location');
+      const deptNameEl = document.getElementById('edit-dept-name');
       const allowed = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s'\-]+$/;
       const nameOk = !nm || nm.value.trim()==='' || allowed.test(nm.value.trim());
       const surOk = !sn || sn.value.trim()==='' || allowed.test(sn.value.trim());
@@ -451,11 +538,32 @@ const lang = document.getElementById('edit-lang'); if (lang) lang.addEventListen
         state.preferences.surname = sn?.value.trim() || '';
         if (dept) state.preferences.department = dept.value;
         if (langSel) state.preferences.language = langSel.value;
+        if (phoneEl) state.preferences.phone = phoneEl.value.trim();
+        if (locationEl) state.preferences.location = locationEl.value.trim();
+        if (deptNameEl) state.preferences.departmentName = deptNameEl.value.trim();
         savePrefs();
         applyPrefs();
         render();
         applyLanguage();
       }
+    });
+  }
+
+  const btnChangePass = document.getElementById('btn-change-pass');
+  if (btnChangePass) {
+    btnChangePass.addEventListener('click', () => {
+      const cur = document.getElementById('edit-pass-current');
+      const nw = document.getElementById('edit-pass-new');
+      const cf = document.getElementById('edit-pass-confirm');
+      const err = document.getElementById('err-pass');
+      if (!nw || !cf || !err) return;
+      const a = (nw.value || '').trim();
+      const b = (cf.value || '').trim();
+      if (!a || a.length < 8) { err.textContent = 'La contraseña debe tener al menos 8 caracteres'; err.classList.add('show'); return; }
+      if (a !== b) { err.textContent = 'Las contraseñas no coinciden'; err.classList.add('show'); return; }
+      err.textContent = 'Contraseña actualizada';
+      err.classList.add('show');
+      setTimeout(() => { err.classList.remove('show'); err.textContent = ''; nw.value = ''; cf.value = ''; if (cur) cur.value = ''; }, 1400);
     });
   }
 };
@@ -521,13 +629,6 @@ const renderSidebar = () => {
           </div>
         </div>
         ${tpl}
-        <div class="sidebar-footer">
-          <button class="sidebar-item avatar-item" data-page="editar" aria-label="${t('menuEdit')}">
-            <img src="${state.preferences?.avatar || resolveAsset('img/Usuario1.png')}" alt="Perfil" class="avatar" />
-          </button>
-          <div class="avatar-name">${[(state.preferences?.name||'').trim(), (state.preferences?.surname||'').trim()].filter(Boolean).join(' ')}</div>
-          <input id="avatar-file-input" type="file" accept="image/*" hidden aria-hidden="true" />
-        </div>
       </div>
     `;
   }
@@ -569,23 +670,37 @@ const renderSidebar = () => {
           }).join('');
         })()}
       </nav>
-      <div class="sidebar-footer">
-        <button class="sidebar-item avatar-item" data-page="editar" aria-label="${t('menuEdit')}">
-          <img src="${state.preferences?.avatar || resolveAsset('img/Usuario1.png')}" alt="Perfil" class="avatar" />
-        </button>
-        <div class="avatar-name">${[(state.preferences?.name||'').trim(), (state.preferences?.surname||'').trim()].filter(Boolean).join(' ')}</div>
-        <input id="avatar-file-input" type="file" accept="image/*" hidden aria-hidden="true" />
-      </div>
     </div>
   `;
 };
 
 const renderHeader = () => {
   const tpl = getTemplateHTML('header-template');
+  const isDashboard = (() => {
+    try {
+      const p = (window.location && window.location.pathname) || '';
+      const byPath = /\/dashboard\.html$/.test(p);
+      const onEditPath = /\/editar\.html$/.test(p);
+      const byState = state.activePage === 'dashboard';
+      return (byState || byPath) && !onEditPath && state.activePage !== 'planning' && state.activePage !== 'editar';
+    } catch(_) { return state.activePage === 'dashboard'; }
+  })();
+  const customizeItem = isDashboard ? `<button type="button" class="header-menu-item" role="menuitem" data-action="customize-dashboard"><span class="menu-icon" data-lucide="wand-2"></span><span>Personaliza tu dashboard</span></button>` : '';
+  const menuHTML = `
+    <div id="header-menu" class="header-menu" role="menu" aria-labelledby="header-profile" hidden>
+      <button type="button" class="header-menu-item" role="menuitem" data-action="go-edit"><span class="menu-icon" data-lucide="square-pen"></span><span>Editar</span></button>
+      ${customizeItem}
+      <button type="button" class="header-menu-item logout" role="menuitem" data-action="logout"><span class="menu-icon" data-lucide="log-out"></span><span>Cerrar sesión</span></button>
+    </div>`;
   if (tpl) {
     return `
       <header class="header">
         <div class="header-content">
+          <div class="header-bar">
+            <button id="header-profile" class="header-profile-btn" aria-label="Perfil" aria-haspopup="menu" aria-expanded="false" aria-controls="header-menu"><img src="${state.preferences?.avatar || resolveAsset('img/Usuario1.png')}" alt="Perfil" class="header-avatar" /></button>
+            ${menuHTML}
+            <input id="avatar-file-input" type="file" accept="image/*" hidden aria-hidden="true" />
+          </div>
           <div class="welcome-box">${tpl}</div>
           ${state.activePage === 'dashboard' ? '<button id="fabMain" type="button" class="dashboard-cta">Personaliza tu dashboard</button>' : ''}
         </div>
@@ -595,6 +710,11 @@ const renderHeader = () => {
   return `
     <header class="header">
       <div class="header-content">
+        <div class="header-bar">
+          <button id="header-profile" class="header-profile-btn" aria-label="Perfil" aria-haspopup="menu" aria-expanded="false" aria-controls="header-menu"><img src="${state.preferences?.avatar || resolveAsset('img/Usuario1.png')}" alt="Perfil" class="header-avatar" /></button>
+          ${menuHTML}
+          <input id="avatar-file-input" type="file" accept="image/*" hidden aria-hidden="true" />
+        </div>
         <div class="welcome-box">
           <p class="welcome-text">${t('welcome', (state.preferences?.name||'').trim().split(/\s+/)[0] || '')}</p>
           <img src="${resolveAsset('img/Usuario1.png')}" alt="Ilustración" class="welcome-figure" />
@@ -831,12 +951,73 @@ const render = () => {
   applyLanguage();
   if (typeof window.ensureFab === 'function') { try { window.ensureFab(); } catch(e){} }
 
+  const headerBtn = document.getElementById('header-profile');
+  const headerMenu = document.getElementById('header-menu');
+  if (headerBtn && headerMenu && !headerBtn.dataset.bound) {
+    const openMenu = () => {
+      headerMenu.hidden = false;
+      headerMenu.classList.add('show');
+      headerBtn.setAttribute('aria-expanded', 'true');
+      const first = headerMenu.querySelector('.header-menu-item');
+      if (first) { try { first.focus(); } catch(_) {} }
+    };
+    const closeMenu = () => {
+      headerMenu.classList.remove('show');
+      headerBtn.setAttribute('aria-expanded', 'false');
+      setTimeout(() => { headerMenu.hidden = true; }, 180);
+    };
+    headerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (headerMenu.hidden) openMenu(); else closeMenu();
+    });
+    headerBtn.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (headerMenu.hidden) openMenu(); }
+      if (e.key === 'Escape') { e.preventDefault(); if (!headerMenu.hidden) closeMenu(); }
+    });
+    document.addEventListener('click', (e) => {
+      if (!headerMenu.hidden && !e.target.closest('#header-menu') && !e.target.closest('#header-profile')) { closeMenu(); }
+    });
+    headerMenu.addEventListener('keydown', (e) => {
+      const items = Array.from(headerMenu.querySelectorAll('.header-menu-item'));
+      const idx = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); const next = items[(idx + 1) % items.length]; if (next) next.focus(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); const prev = items[(idx - 1 + items.length) % items.length]; if (prev) prev.focus(); }
+      if (e.key === 'Home') { e.preventDefault(); if (items[0]) items[0].focus(); }
+      if (e.key === 'End') { e.preventDefault(); if (items[items.length - 1]) items[items.length - 1].focus(); }
+      if (e.key === 'Escape') { e.preventDefault(); closeMenu(); headerBtn.focus(); }
+    });
+    headerMenu.querySelectorAll('.header-menu-item').forEach(item => {
+      item.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const act = item.dataset.action;
+        closeMenu();
+        if (act === 'go-edit') {
+          try { window.location.href = './editar.html'; } catch(_) {}
+        } else if (act === 'customize-dashboard') {
+          try {
+            const onDash = !!document.getElementById('fabMain');
+            if (onDash) { document.getElementById('fabMain')?.click(); }
+            else { window.location.href = './dashboard.html#customize'; }
+          } catch(_) {}
+        } else if (act === 'logout') {
+          try {
+            localStorage.removeItem(PREFS_KEY);
+            state.preferences = { name:'', surname:'', department:'ti', language:'es', theme:'light', fontSize:16, palette:null, avatar:null };
+            savePrefs();
+            window.location.href = './index.html';
+          } catch(_) {}
+        }
+      });
+    });
+    headerBtn.dataset.bound = '1';
+  }
+
   // FAB global: disponible en todas las vistas
   (function bindGlobalFab(){
     const req = document.getElementById('requestsBtn');
-    if (req && !req.dataset.bound) { req.addEventListener('click', () => { try { if (typeof window.openRequestsModal === 'function') window.openRequestsModal(); } catch(e){} }); req.dataset.bound = '1'; }
+    if (req && !req.dataset.bound) { req.addEventListener('click', () => { try { if (typeof window.openRequestsModal === 'function') window.openRequestsModal(); else { window.location.href = './dashboard.html#requests'; } } catch(e){} }); req.dataset.bound = '1'; }
     const chat = document.getElementById('chatbotBtn');
-    if (chat && !chat.dataset.bound) { chat.addEventListener('click', () => { try { if (typeof window.openChatbotModal === 'function') window.openChatbotModal(); } catch(e){} }); chat.dataset.bound = '1'; }
+    if (chat && !chat.dataset.bound) { chat.addEventListener('click', () => { try { if (typeof window.openChatbotModal === 'function') window.openChatbotModal(); else { window.location.href = './dashboard.html#chatbot'; } } catch(e){} }); chat.dataset.bound = '1'; }
   })();
 
   // Delegación de eventos como respaldo: asegura acción aunque falle el binding
@@ -845,8 +1026,8 @@ const render = () => {
       const el = ev.target.closest ? ev.target.closest('#requestsBtn, #chatbotBtn') : null;
       if (!el) return;
       ev.preventDefault();
-      if (el.id === 'requestsBtn') { try { if (typeof window.openRequestsModal === 'function') window.openRequestsModal(); } catch(_){} }
-      if (el.id === 'chatbotBtn') { try { if (typeof window.openChatbotModal === 'function') window.openChatbotModal(); } catch(_){} }
+      if (el.id === 'requestsBtn') { try { if (typeof window.openRequestsModal === 'function') window.openRequestsModal(); else { window.location.href = './dashboard.html#requests'; } } catch(_){} }
+      if (el.id === 'chatbotBtn') { try { if (typeof window.openChatbotModal === 'function') window.openChatbotModal(); else { window.location.href = './dashboard.html#chatbot'; } } catch(_){} }
     }, true);
     document.__fabDelegationBound = true;
   }
@@ -894,7 +1075,6 @@ const render = () => {
     });
   });
 
-  // Subida de avatar al hacer clic en la imagen (sin navegar)
   const avatarImgs = document.querySelectorAll('.sidebar-footer .avatar');
   const fileInput = document.getElementById('avatar-file-input');
   avatarImgs.forEach(img => {
@@ -922,7 +1102,7 @@ const render = () => {
         state.preferences.avatar = dataUrl;
         savePrefs();
         // Actualizar todas las instancias del avatar visibles
-        document.querySelectorAll('.sidebar-footer .avatar').forEach(el => { el.src = dataUrl; });
+        document.querySelectorAll('.sidebar-footer .avatar, .header-avatar').forEach(el => { el.src = dataUrl; });
         // Mantener la ilustración del banner intacta
         const fig = document.querySelector('.welcome-figure'); if (fig) fig.src = resolveAsset('img/Usuario1.png');
       };
@@ -1053,6 +1233,17 @@ const render = () => {
     }
     // Tras inicializar, refrescar colores de gráficos según tema
     try { if (typeof window.refreshChartsForTheme === 'function') window.refreshChartsForTheme(); } catch {}
+    // Abrir catálogo si se solicitó por hash/parámetro
+    try {
+      const hash = (window.location && window.location.hash) || '';
+      const search = (window.location && window.location.search) || '';
+      const wantsCatalog = (hash === '#customize' || search.includes('openCatalog=1'));
+      const wantsRequests = (hash === '#requests' || search.includes('openRequests=1'));
+      const wantsChatbot = (hash === '#chatbot' || search.includes('openChatbot=1'));
+      if (wantsCatalog) { document.getElementById('fabMain')?.click(); }
+      if (wantsRequests) { try { if (typeof window.openRequestsModal === 'function') window.openRequestsModal(); } catch(_){} }
+      if (wantsChatbot) { try { if (typeof window.openChatbotModal === 'function') window.openChatbotModal(); } catch(_){} }
+    } catch(_) {}
   }
 
   // Control del menú se realiza por acercamiento/hover (SocyaMenu)
@@ -1194,3 +1385,104 @@ const deptLabel = (id) => {
   if (!d) return id;
   return (state?.preferences?.language === 'en') ? d.en : d.es;
 };
+const LOCATIONS = [
+  { id: 'bogota', es: 'Bogotá — Sede Principal', en: 'Bogotá — Headquarters' },
+  { id: 'medellin', es: 'Medellín', en: 'Medellín Office' },
+  { id: 'cali', es: 'Cali', en: 'Cali Office' },
+  { id: 'barranquilla', es: 'Barranquilla', en: 'Barranquilla Office' },
+  { id: 'cartagena', es: 'Cartagena', en: 'Cartagena Office' },
+  { id: 'bucaramanga', es: 'Bucaramanga', en: 'Bucaramanga Office' },
+  { id: 'pereira', es: 'Pereira', en: 'Pereira Office' },
+  { id: 'manizales', es: 'Manizales', en: 'Manizales Office' },
+  { id: 'santa_marta', es: 'Santa Marta', en: 'Santa Marta Office' },
+  { id: 'villavicencio', es: 'Villavicencio', en: 'Villavicencio Office' },
+  { id: 'remoto', es: 'Remoto', en: 'Remote' },
+];
+const locationLabel = (id) => {
+  const d = LOCATIONS.find(x => x.id === id);
+  if (!d) return id;
+  return (state?.preferences?.language === 'en') ? d.en : d.es;
+};
+const ORG_DEPT_NAMES = [
+  { id: 'operaciones', es: 'Operaciones', en: 'Operations' },
+  { id: 'finanzas', es: 'Finanzas', en: 'Finance' },
+  { id: 'ventas', es: 'Ventas', en: 'Sales' },
+  { id: 'logistica', es: 'Logística', en: 'Logistics' },
+  { id: 'legal', es: 'Legal', en: 'Legal' },
+  { id: 'compras', es: 'Compras', en: 'Purchasing' },
+  { id: 'marketing', es: 'Marketing', en: 'Marketing' },
+  { id: 'diseno', es: 'Diseño', en: 'Design' },
+  { id: 'ti', es: 'TI', en: 'IT' },
+  { id: 'rrhh', es: 'RRHH', en: 'HR' },
+  { id: 'calidad', es: 'Calidad', en: 'Quality' },
+  { id: 'atencion', es: 'Atención al cliente', en: 'Customer Support' },
+];
+const orgDeptLabel = (id) => {
+  const d = ORG_DEPT_NAMES.find(x => x.id === id);
+  if (!d) return id;
+  return (state?.preferences?.language === 'en') ? d.en : d.es;
+};
+  // Menú del header (avatar)
+  const headerBtn = document.getElementById('header-profile');
+  const headerMenu = document.getElementById('header-menu');
+  if (headerBtn && headerMenu) {
+    let openedByKeyboard = false;
+    const openMenu = () => {
+      headerMenu.hidden = false;
+      headerMenu.classList.add('show');
+      headerBtn.setAttribute('aria-expanded', 'true');
+      if (openedByKeyboard) {
+        const first = headerMenu.querySelector('.header-menu-item');
+        if (first) { try { first.focus(); } catch(_) {} }
+      }
+    };
+    const closeMenu = () => {
+      headerMenu.classList.remove('show');
+      headerBtn.setAttribute('aria-expanded', 'false');
+      setTimeout(() => { headerMenu.hidden = true; }, 180);
+    };
+    headerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openedByKeyboard = false;
+      if (headerMenu.hidden) openMenu(); else closeMenu();
+    });
+    headerBtn.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openedByKeyboard = true; if (headerMenu.hidden) openMenu(); }
+      if (e.key === 'Escape') { e.preventDefault(); if (!headerMenu.hidden) closeMenu(); }
+    });
+    document.addEventListener('click', (e) => {
+      if (!headerMenu.hidden && !e.target.closest('#header-menu') && !e.target.closest('#header-profile')) { closeMenu(); }
+    });
+    headerMenu.addEventListener('keydown', (e) => {
+      const items = Array.from(headerMenu.querySelectorAll('.header-menu-item'));
+      const idx = items.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); const next = items[(idx + 1) % items.length]; if (next) next.focus(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); const prev = items[(idx - 1 + items.length) % items.length]; if (prev) prev.focus(); }
+      if (e.key === 'Home') { e.preventDefault(); if (items[0]) items[0].focus(); }
+      if (e.key === 'End') { e.preventDefault(); if (items[items.length - 1]) items[items.length - 1].focus(); }
+      if (e.key === 'Escape') { e.preventDefault(); closeMenu(); headerBtn.focus(); }
+    });
+    headerMenu.querySelectorAll('.header-menu-item').forEach(item => {
+      item.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const act = item.dataset.action;
+        closeMenu();
+        if (act === 'go-edit') {
+          try { window.location.href = './editar.html'; } catch(_) {}
+        } else if (act === 'customize-dashboard') {
+          try {
+            const onDash = !!document.getElementById('fabMain');
+            if (onDash) { document.getElementById('fabMain')?.click(); }
+            else { window.location.href = './dashboard.html#customize'; }
+          } catch(_) {}
+        } else if (act === 'logout') {
+          try {
+            localStorage.removeItem(PREFS_KEY);
+            state.preferences = { name:'', surname:'', department:'ti', language:'es', theme:'light', fontSize:16, palette:null, avatar:null };
+            savePrefs();
+            window.location.href = './index.html';
+          } catch(_) {}
+        }
+      });
+    });
+  }

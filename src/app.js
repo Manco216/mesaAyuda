@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -1500,7 +1500,7 @@ function openChartModal(defaultId, previewType) {
   }
 
   // Modal de Peticiones
-  let requestsState = { view: 'my', query: '', all: [], my: [], received: [] };
+  let requestsState = { view: 'my', query: '', all: [], my: [], received: [], lastOption: 'menu', criteria: null, filterMode: null };
   function loadRequests() {
     // Fuente dinámica: si existe window.REQUESTS_DATA se usa, si no, ejemplo
     const demo = [
@@ -1554,6 +1554,82 @@ function openChartModal(defaultId, previewType) {
     });
   }
 
+  function parseDateText(s) {
+    if (!s) return null;
+    const d1 = new Date(s);
+    if (!isNaN(d1.getTime())) return d1;
+    const m = String(s).trim().toLowerCase().match(/^(\d{1,2})\s+([a-zñ\.]+)\s+(\d{4})$/);
+    if (m) {
+      const months = { 'ene':0,'feb':1,'mar':2,'abr':3,'may':4,'jun':5,'jul':6,'ago':7,'sep':8,'oct':9,'nov':10,'dic':11,'jan':0,'feb':1,'mar':2,'apr':3,'may':4,'jun':5,'jul':6,'aug':7,'sep':8,'oct':9,'nov':10,'dec':11 };
+      const dd = Number(m[1]);
+      const mm = months[m[2].slice(0,3)] ?? months[m[2]];
+      const yyyy = Number(m[3]);
+      if (mm !== undefined) return new Date(yyyy, mm, dd);
+    }
+    const m2 = String(s).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m2) return new Date(Number(m2[1]), Number(m2[2]) - 1, Number(m2[3]));
+    return null;
+  }
+
+  function filterRequestsAdvanced(list, c) {
+    if (!c) return list;
+    const reported = String(c.reportedBy||'').trim().toLowerCase();
+    const pid = String(c.id||'').trim().toLowerCase();
+    const assigned = String(c.assignedTo||'').trim().toLowerCase();
+    const category = String(c.category||'').trim().toLowerCase();
+    const dept = String(c.department||'').trim().toLowerCase();
+    const status = String(c.status||'').trim().toLowerCase();
+    const priority = String(c.priority||'').trim().toLowerCase();
+    const kw = String(c.keywords||'').trim().toLowerCase();
+    const tokens = kw ? kw.split(/\s+/) : [];
+    const fields = c.fields||{ title:true, description:true, solution:true };
+    const from = c.dateFrom ? new Date(c.dateFrom) : null;
+    const to = c.dateTo ? new Date(c.dateTo) : null;
+    const fromOk = from && !isNaN(from.getTime()) ? from : null;
+    const toOk = to && !isNaN(to.getTime()) ? to : null;
+    const res = list.filter(r => {
+      if (reported && ![r?.remitente,r?.autor,r?.de,r?.from].filter(Boolean).map(v=>String(v).toLowerCase()).some(v=>v.includes(reported))) return false;
+      if (pid && String(r?.id||'').toLowerCase() !== pid) return false;
+      if (assigned && !String(r?.responsable||'').toLowerCase().includes(assigned)) return false;
+      if (category && ![r?.category,r?.tipo].filter(Boolean).map(v=>String(v).toLowerCase()).some(v=>v.includes(category))) return false;
+      if (dept && !String(r?.equipo||'').toLowerCase().includes(dept)) return false;
+      if (status && !String(r?.estado||'').toLowerCase().includes(status)) return false;
+      if (priority && !String(r?.priority||'').toLowerCase().includes(priority)) return false;
+      if (tokens.length) {
+        const pool = [];
+        if (fields.title) pool.push(String(r?.objetivo||'').toLowerCase());
+        if (fields.description) pool.push(String(r?.referencia||'').toLowerCase());
+        if (fields.solution) pool.push(String(r?.notas||'').toLowerCase());
+        if (!tokens.every(t=>pool.some(v=>v && v.includes(t)))) return false;
+      }
+      if (fromOk || toOk) {
+        const rf = parseDateText(r?.fecha);
+        if (!rf) return false;
+        if (fromOk && rf < fromOk) return false;
+        if (toOk && rf > toOk) return false;
+      }
+      return true;
+    });
+    const order = String(c.orderBy||'').trim().toLowerCase();
+    if (order) {
+      const keyOf = (r) => {
+        if (order==='fecha') return parseDateText(r?.fecha)?.getTime()||0;
+        if (order==='estado') return String(r?.estado||'').toLowerCase();
+        if (order==='responsable') return String(r?.responsable||'').toLowerCase();
+        if (order==='equipo') return String(r?.equipo||'').toLowerCase();
+        if (order==='objetivo' || order==='titulo' || order==='title') return String(r?.objetivo||'').toLowerCase();
+        if (order==='id') return String(r?.id||'');
+        return String(r?.objetivo||'').toLowerCase();
+      };
+      res.sort((a,b)=>{
+        const va = keyOf(a); const vb = keyOf(b);
+        if (typeof va === 'number' && typeof vb === 'number') return va - vb;
+        return String(va).localeCompare(String(vb));
+      });
+    }
+    return res;
+  }
+
   function collectSuggestions(all) {
     const map = new Map();
     const add = (v) => { if (!v) return; const s = v.toString().trim(); if (!s) return; const k = s.toLowerCase(); if (!map.has(k)) map.set(k, s); };
@@ -1575,14 +1651,25 @@ function openChartModal(defaultId, previewType) {
   }
 
   function updateRequestsList() {
-    const src = requestsState.view === 'my' ? requestsState.my : requestsState.received;
-    const filtered = filterRequests(src, requestsState.query);
-    renderRequests(filtered);
+    let src = requestsState.view === 'my' ? requestsState.my : requestsState.received;
+    if (requestsState.filterMode === 'closed_all') src = requestsState.all;
+    else if (requestsState.filterMode === 'closed_my') src = requestsState.my;
+    else if (requestsState.filterMode === 'closed_received') src = requestsState.received;
+    const base = (requestsState.lastOption === 'search' && requestsState.criteria) ? filterRequestsAdvanced(src, requestsState.criteria) : filterRequests(src, requestsState.query);
+    const final = (requestsState.filterMode && requestsState.filterMode.startsWith('closed'))
+      ? base.filter(r => String(r?.estado||'').toLowerCase().includes('culminado'))
+      : base;
+    renderRequests(final);
   }
 
   function setRequestsView(view) {
     const myBtn = document.getElementById('reqTabMy');
     const recBtn = document.getElementById('reqTabReceived');
+    const fMy = document.getElementById('rqFilterMy');
+    const fRec = document.getElementById('rqFilterReceived');
+    const cAll = document.getElementById('rqFilterClosedAll');
+    const cMine = document.getElementById('rqFilterClosedMine');
+    const cAssigned = document.getElementById('rqFilterClosedAssigned');
     requestsState.view = view;
     if (myBtn && recBtn) {
       if (view === 'my') {
@@ -1593,7 +1680,33 @@ function openChartModal(defaultId, previewType) {
         myBtn.classList.remove('active'); myBtn.setAttribute('aria-selected','false');
       }
     }
+    if (fMy && fRec) {
+      if (view === 'my') {
+        fMy.classList.add('active');
+        fRec.classList.remove('active');
+      } else {
+        fRec.classList.add('active');
+        fMy.classList.remove('active');
+      }
+    }
+    if (cAll || cMine || cAssigned) {
+      const set = (el, on) => { if (!el) return; if (on) el.classList.add('active'); else el.classList.remove('active'); };
+      if (requestsState.filterMode === 'closed_all') { set(cAll,true); set(cMine,false); set(cAssigned,false); }
+      else if (requestsState.filterMode === 'closed_my') { set(cAll,false); set(cMine,true); set(cAssigned,false); }
+      else if (requestsState.filterMode === 'closed_received') { set(cAll,false); set(cMine,false); set(cAssigned,true); }
+      else { set(cAll,false); set(cMine,false); set(cAssigned,false); }
+    }
     updateRequestsList();
+  }
+
+  function setClosedActive(which) {
+    const cAll = document.getElementById('rqFilterClosedAll');
+    const cMine = document.getElementById('rqFilterClosedMine');
+    const cAssigned = document.getElementById('rqFilterClosedAssigned');
+    const set = (el, on) => { if (!el) return; if (on) el.classList.add('active'); else el.classList.remove('active'); };
+    set(cAll, which === 'all');
+    set(cMine, which === 'mine');
+    set(cAssigned, which === 'assigned');
   }
 
   function setupRequestsSearch() {
@@ -1772,7 +1885,9 @@ function openChartModal(defaultId, previewType) {
     if (!item) return;
     const idx = Number(item.getAttribute('data-index'));
     const base = requestsState.view === 'my' ? requestsState.my : requestsState.received;
-    const current = filterRequests(base, requestsState.query);
+    const current = (requestsState.lastOption === 'search' && requestsState.criteria)
+      ? filterRequestsAdvanced(base, requestsState.criteria)
+      : filterRequests(base, requestsState.query);
     const r = current[idx];
     if (!r) return;
     const detailsPanel = document.getElementById('requestDetailsPanel');
@@ -1846,11 +1961,11 @@ function openChartModal(defaultId, previewType) {
     const split = splitRequests(requestsState.all);
     requestsState.my = split.my;
     requestsState.received = split.received;
-    requestsState.view = 'my';
-    requestsState.query = '';
-    setRequestsView('my');
+    if (!requestsState.lastOption || requestsState.lastOption === 'menu') {
+      requestsState.view = 'my';
+      requestsState.query = '';
+    }
     updateSuggestionsUI('');
-    setupRequestsSearch();
     const myBtn = document.getElementById('reqTabMy');
     const recBtn = document.getElementById('reqTabReceived');
     if (myBtn && !myBtn.dataset.inited) { myBtn.addEventListener('click', () => setRequestsView('my')); myBtn.dataset.inited = 'true'; }
@@ -1858,6 +1973,13 @@ function openChartModal(defaultId, previewType) {
     const newBtn = document.getElementById('requestNewBtn');
     if (newBtn && !newBtn.dataset.inited) { newBtn.addEventListener('click', () => openNewRequestForm()); newBtn.dataset.inited = 'true'; }
     initNewRequestForm();
+    const filtersBarExisting = document.querySelector('#requestsContainer .requests-filters');
+    if (!filtersBarExisting && container) {
+      const fb = document.createElement('div');
+      fb.className = 'requests-filters';
+      fb.innerHTML = '<div class="filters-row"><button id="rqFilterMy" class="tab-btn" type="button">Mis Peticiones</button><div class="filters-closed"><button id="rqFilterClosedAll" class="tab-btn" type="button">Todos cerrados</button><button id="rqFilterClosedMine" class="tab-btn" type="button">Mis cerradas</button></div><div class="search-input-wrap"><input id="requestsSearchInput" type="text" placeholder="Buscar" aria-label="Buscar peticiones" autocomplete="off" /><ul id="requestsSearchSuggestions" class="search-suggestions" hidden aria-label="Sugerencias"></ul></div></div>';
+      container.insertBefore(fb, listPanel);
+    }
     const cancelBtn = document.getElementById('requestNewCancel');
     if (cancelBtn && !cancelBtn.dataset.inited) {
       cancelBtn.addEventListener('click', () => { closeNewRequestForm(); resetNewRequestForm(); });
@@ -1870,10 +1992,331 @@ function openChartModal(defaultId, previewType) {
     }
     modal.classList.add('show');
     modal.removeAttribute('hidden');
-    try {
-      modal.style.display = 'flex';
-      modal.style.visibility = 'visible';
-    } catch (_) {}
+    const header = modal.querySelector('.modal-header');
+    const titleEl2 = document.getElementById('requestsTitle');
+    const getBackArrow = () => document.getElementById('requestsBackArrow');
+    const removeBackArrow = () => { const b = getBackArrow(); if (b) { try { b.remove(); } catch(_){} } };
+    const ensureBackArrow = () => {
+      let b = getBackArrow();
+      if (!b && header && titleEl2) {
+        b = document.createElement('button');
+        b.id = 'requestsBackArrow';
+        b.type = 'button';
+        b.className = 'modal-back-btn';
+        b.innerHTML = '<span data-lucide="arrow-left"></span>';
+        header.insertBefore(b, titleEl2);
+        if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch {} }
+      }
+      return b;
+    };
+    let menuView = document.getElementById('requestsMenuView');
+    const content = modal.querySelector('.modal-content');
+    const container = document.getElementById('requestsContainer');
+    const listPanel = document.getElementById('requestsListPanel');
+    let searchView = document.getElementById('requestsSearchView');
+    if (!menuView && content) {
+      menuView = document.createElement('div');
+      menuView.id = 'requestsMenuView';
+      menuView.className = 'requests-view show';
+      menuView.innerHTML = '<div class="requests-menu"><button id="rqMenuNew" class="menu-item" type="button"><span class="icon" data-lucide="file-plus"></span><span>Nueva solicitud</span></button><button id="rqMenuMy" class="menu-item" type="button"><span class="icon" data-lucide="user"></span><span>Mis solicitudes</span></button><button id="rqMenuProcess" class="menu-item" type="button"><span class="icon" data-lucide="workflow"></span><span>Pendientes del proceso</span></button><button id="rqMenuClosed" class="menu-item" type="button"><span class="icon" data-lucide="lock"></span><span>Cerrados</span></button><button id="rqMenuSearch" class="menu-item" type="button"><span class="icon" data-lucide="search"></span><span>Buscar solicitudes</span></button><button id="rqMenuEdit" class="menu-item" type="button"><span class="icon" data-lucide="pencil"></span><span>Editar información</span></button></div><div class="menu-section"><div class="menu-title">Buscar en la base de conocimiento</div><div class="menu-actions"><input id="rqKbInput" class="menu-input" type="text" placeholder="ID" /><button id="rqKbBtn" type="button" class="modal-add-btn">Buscar</button></div></div><div class="menu-section"><div class="menu-title">Ver problemas por usuario</div><div class="menu-actions"><select id="rqUserSelect" class="menu-select"><option value="hmanco">hmanco</option></select><button id="rqUserViewBtn" type="button" class="menu-view-btn">Ver</button></div></div>';
+      content.appendChild(menuView);
+      if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch {} }
+      const showMenu = () => {
+        if (menuView) { menuView.classList.add('show'); }
+        if (container) { container.hidden = true; }
+        if (searchView) { searchView.classList.remove('show'); searchView.hidden = true; }
+        const resultsViewEl = document.getElementById('requestsResultsView');
+        if (resultsViewEl) { resultsViewEl.classList.remove('show'); resultsViewEl.hidden = true; }
+        removeBackArrow();
+        requestsState.lastOption = 'menu';
+      };
+      const ensureSearchView = () => {
+        let v = document.getElementById('requestsSearchView');
+        if (!v && content) {
+          v = document.createElement('div');
+          v.id = 'requestsSearchView';
+          v.className = 'requests-view';
+          v.innerHTML = '<div class="search-view"><form id="requestsSearchForm" class="search-form" aria-label="Buscar solicitudes"><div class="menu-section"><div class="menu-title">Especificaciones</div><div class="search-grid"><label class="field"><span>Reportado por</span><input id="rqSearchReported" type="text" class="menu-input" /></label><label class="field"><span>ID del problema</span><input id="rqSearchId" type="text" class="menu-input" /></label><label class="field"><span>Asignado a</span><select id="rqSearchAssigned" class="menu-select"><option value="">Cualquiera</option></select></label><label class="field"><span>Categoría</span><input id="rqSearchCategory" type="text" class="menu-input" /></label><label class="field"><span>Departamento</span><select id="rqSearchDept" class="menu-select"><option value="">Cualquiera</option></select></label><label class="field"><span>Estado</span><select id="rqSearchStatus" class="menu-select"><option value="">Cualquiera</option><option value="Culminado">Culminado</option><option value="En curso">En curso</option><option value="Bloqueado">Bloqueado</option><option value="Bajo revisión">Bajo revisión</option></select></label><label class="field"><span>Prioridad</span><input id="rqSearchPriority" type="text" class="menu-input" /></label></div></div><div class="menu-section"><div class="menu-title">Contiene</div><div class="search-grid"><label class="field"><span>Palabras clave</span><input id="rqSearchKeywords" type="text" class="menu-input" placeholder="Ej: proveedor junio" /></label><div class="search-checkboxes"><label><input id="rqSFTitle" type="checkbox" checked /> Título</label><label><input id="rqSFDesc" type="checkbox" checked /> Descripción</label><label><input id="rqSFSolution" type="checkbox" checked /> Solución</label></div></div></div><div class="menu-section"><div class="menu-title">Orden y fechas</div><div class="search-grid"><label class="field"><span>Ordenar por</span><select id="rqSearchOrderBy" class="menu-select"><option value="">Predeterminado</option><option value="fecha">Fecha</option><option value="estado">Estado</option><option value="responsable">Responsable</option><option value="equipo">Departamento</option><option value="objetivo">Título</option><option value="id">ID</option></select></label><label class="field"><span>Desde</span><input id="rqSearchFrom" type="date" class="menu-input" /></label><label class="field"><span>Hasta</span><input id="rqSearchTo" type="date" class="menu-input" /></label></div></div></form></div>';
+          content.appendChild(v);
+        }
+        return v;
+      };
+      const applyOption = (opt) => {
+        if (menuView) { menuView.classList.remove('show'); }
+        if (container) { container.hidden = false; }
+        if (listPanel) { listPanel.classList.remove('dimmed'); }
+        requestsState.lastOption = opt;
+        if (backBtn) backBtn.hidden = false;
+        switch (opt) {
+          case 'my': setRequestsView('my'); break;
+          case 'received': setRequestsView('received'); break;
+          case 'closed': requestsState.query = 'Culminado'; updateSuggestionsUI(requestsState.query); updateRequestsList(); break;
+          case 'search': {
+            const v = ensureSearchView(); searchView = v;
+            if (container) container.hidden = true;
+            if (v) { v.hidden = false; void v.offsetWidth; v.classList.add('show'); }
+            const svContainer = (searchView && searchView.querySelector('.search-view')) || searchView;
+            if (svContainer && !svContainer.querySelector('.requests-topbar')) {
+              const tb = document.createElement('div');
+              tb.className = 'requests-topbar';
+              tb.innerHTML = '<div class="menu-title">Buscar solicitudes</div><div class="menu-actions"><button type="submit" id="rqSearchSubmitTop" class="modal-add-btn" form="requestsSearchForm">Buscar</button></div>';
+              svContainer.insertBefore(tb, svContainer.firstChild);
+            }
+            const names = Array.from(new Set(requestsState.all.map(r => r?.responsable).filter(Boolean)));
+            const depts = Array.from(new Set(requestsState.all.map(r => r?.equipo).filter(Boolean)));
+            const selA = document.getElementById('rqSearchAssigned');
+            const selD = document.getElementById('rqSearchDept');
+            if (selA && !selA.dataset.filled) { selA.innerHTML = '<option value="">Cualquiera</option>' + names.map(n=>`<option value="${n}">${n}</option>`).join(''); selA.dataset.filled='true'; }
+            if (selD && !selD.dataset.filled) { selD.innerHTML = '<option value="">Cualquiera</option>' + depts.map(n=>`<option value="${n}">${n}</option>`).join(''); selD.dataset.filled='true'; }
+            const form = document.getElementById('requestsSearchForm');
+            const bottomActions = form && form.querySelector('.form-actions');
+            if (bottomActions) { try { bottomActions.remove(); } catch(_){} }
+            const bottomBtnExisting = document.getElementById('rqSearchSubmit');
+            if (bottomBtnExisting) { try { bottomBtnExisting.remove(); } catch(_){} }
+            let resultsWrap = document.getElementById('requestsSearchResults');
+            let resultsView = document.getElementById('requestsResultsView');
+            if (!resultsWrap) {
+              resultsWrap = document.createElement('div');
+              resultsWrap.id = 'requestsSearchResults';
+              resultsWrap.className = 'search-results';
+              resultsWrap.setAttribute('hidden','');
+              resultsWrap.innerHTML = '<div class="sr-header">Resultados de búsqueda</div><table class="sr-table" aria-label="Resultados"><thead><tr><th>ID</th><th>Título</th><th>Usuario</th><th>Asignado a</th><th>Fecha</th><th>Estado</th></tr></thead><tbody id="srTbody"></tbody></table><div class="sr-actions"><button type="button" id="rqSearchAgain" class="modal-secondary-btn">Buscar de nuevo</button></div>';
+            }
+            if (!resultsView && content) {
+              resultsView = document.createElement('div');
+              resultsView.id = 'requestsResultsView';
+              resultsView.className = 'requests-view';
+              resultsView.appendChild(resultsWrap);
+              resultsView.hidden = true;
+              content.appendChild(resultsView);
+            }
+            const againBtn = document.getElementById('rqSearchAgain');
+            const submitBtn = document.getElementById('rqSearchSubmit');
+            const submitTop = document.getElementById('rqSearchSubmitTop');
+          if (form && !form.dataset.initedV2) {
+            form.addEventListener('submit', (e) => {
+              e.preventDefault();
+              const v = (id) => document.getElementById(id)?.value?.trim() || '';
+              const b = (id) => !!document.getElementById(id)?.checked;
+              requestsState.criteria = {
+                reportedBy: v('rqSearchReported'),
+                id: v('rqSearchId'),
+                assignedTo: v('rqSearchAssigned'),
+                category: v('rqSearchCategory'),
+                department: v('rqSearchDept'),
+                status: v('rqSearchStatus'),
+                priority: v('rqSearchPriority'),
+                keywords: v('rqSearchKeywords'),
+                fields: { title: b('rqSFTitle'), description: b('rqSFDesc'), solution: b('rqSFSolution') },
+                orderBy: v('rqSearchOrderBy'),
+                dateFrom: v('rqSearchFrom'),
+                dateTo: v('rqSearchTo')
+              };
+              let resultsWrapLocal = document.getElementById('requestsSearchResults');
+              let resultsViewLocal = document.getElementById('requestsResultsView');
+              if (!resultsWrapLocal) {
+                resultsWrapLocal = document.createElement('div');
+                resultsWrapLocal.id = 'requestsSearchResults';
+                resultsWrapLocal.className = 'search-results';
+                resultsWrapLocal.innerHTML = '<div class="sr-header">Resultados de búsqueda</div><table class="sr-table" aria-label="Resultados"><thead><tr><th>ID</th><th>Título</th><th>Usuario</th><th>Asignado a</th><th>Fecha</th><th>Estado</th></tr></thead><tbody id="srTbody"></tbody></table><div class="sr-actions"><button type="button" id="rqSearchAgain" class="modal-secondary-btn">Buscar de nuevo</button></div>';
+              }
+              if (!resultsViewLocal && content) {
+                resultsViewLocal = document.createElement('div');
+                resultsViewLocal.id = 'requestsResultsView';
+                resultsViewLocal.className = 'requests-view';
+                resultsViewLocal.appendChild(resultsWrapLocal);
+                content.appendChild(resultsViewLocal);
+              }
+              const base = requestsState.all;
+              const filtered = filterRequestsAdvanced(base, requestsState.criteria);
+              const tbody = document.getElementById('srTbody');
+              if (tbody) {
+                tbody.innerHTML = (Array.isArray(filtered) && filtered.length)
+                  ? filtered.map(r => `<tr><td>${r.id||'—'}</td><td>${r.objetivo||''}</td><td>${r.user||'—'}</td><td>${r.responsable||'—'}</td><td>${r.fecha||''}</td><td>${statusLabel(r.estado)}</td></tr>`).join('')
+                  : '<tr><td colspan="6" class="sr-empty">No se encontraron resultados.</td></tr>';
+              }
+              if (searchView) { searchView.classList.remove('show'); searchView.hidden = true; }
+              if (resultsViewLocal) { resultsViewLocal.hidden = false; void resultsViewLocal.offsetWidth; resultsViewLocal.classList.add('show'); }
+            });
+            form.dataset.initedV2 = 'true';
+          }
+            if (submitBtn && !submitBtn.dataset.inited) {
+              submitBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (form && typeof form.requestSubmit === 'function') form.requestSubmit();
+                else if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+              });
+              submitBtn.dataset.inited = 'true';
+            }
+            if (submitTop && !submitTop.dataset.inited) {
+              submitTop.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (form && typeof form.requestSubmit === 'function') form.requestSubmit();
+                else if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+              });
+              submitTop.dataset.inited = 'true';
+            }
+            if (againBtn && !againBtn.dataset.inited) {
+              againBtn.addEventListener('click', () => {
+                const rv = document.getElementById('requestsResultsView');
+                const sv = document.getElementById('requestsSearchView');
+                if (rv) rv.classList.remove('show'); if (rv) rv.hidden = true;
+                if (sv) { sv.hidden = false; void sv.offsetWidth; sv.classList.add('show'); }
+              });
+              againBtn.dataset.inited = 'true';
+            }
+            break;
+          }
+          case 'new': openNewRequestForm(); break;
+          case 'edit': setRequestsView('my'); break;
+          case 'kb': setRequestsView('my'); break;
+          case 'user': setRequestsView('my'); break;
+          default: setRequestsView('my'); break;
+        }
+      };
+      let backBtn = ensureBackArrow();
+      if (backBtn && !backBtn.dataset.inited) { backBtn.addEventListener('click', () => { try { closeNewRequestForm(); resetNewRequestForm(); } catch(_){} showMenu(); }); backBtn.dataset.inited = 'true'; }
+      const btnNew = document.getElementById('rqMenuNew'); if (btnNew && !btnNew.dataset.inited) { btnNew.addEventListener('click', () => { applyOption('new'); }); btnNew.dataset.inited = 'true'; }
+      const btnMy = document.getElementById('rqMenuMy'); if (btnMy && !btnMy.dataset.inited) { btnMy.addEventListener('click', () => { applyOption('my'); }); btnMy.dataset.inited = 'true'; }
+      const btnProc = document.getElementById('rqMenuProcess'); if (btnProc && !btnProc.dataset.inited) { btnProc.addEventListener('click', () => { applyOption('received'); }); btnProc.dataset.inited = 'true'; }
+      const btnClosed = document.getElementById('rqMenuClosed'); if (btnClosed && !btnClosed.dataset.inited) { btnClosed.addEventListener('click', () => { applyOption('closed'); }); btnClosed.dataset.inited = 'true'; }
+      const btnSearch = document.getElementById('rqMenuSearch'); if (btnSearch && !btnSearch.dataset.inited) { btnSearch.addEventListener('click', () => { applyOption('search'); }); btnSearch.dataset.inited = 'true'; }
+      const btnEdit = document.getElementById('rqMenuEdit'); if (btnEdit && !btnEdit.dataset.inited) { btnEdit.addEventListener('click', () => { applyOption('edit'); }); btnEdit.dataset.inited = 'true'; }
+      const kbBtn = document.getElementById('rqKbBtn'); if (kbBtn && !kbBtn.dataset.inited) { kbBtn.addEventListener('click', () => { const vEl = document.getElementById('rqKbInput'); const v = vEl && vEl.value ? String(vEl.value).trim() : ''; applyOption('kb'); if (v) { requestsState.query = v; updateSuggestionsUI(requestsState.query); updateRequestsList(); } }); kbBtn.dataset.inited = 'true'; }
+      const viewBtn = document.getElementById('rqUserViewBtn'); if (viewBtn && !viewBtn.dataset.inited) { viewBtn.addEventListener('click', () => { const sel = document.getElementById('rqUserSelect'); const val = sel && sel.value ? String(sel.value).trim() : ''; applyOption('user'); if (val) { requestsState.query = val; updateSuggestionsUI(requestsState.query); updateRequestsList(); } }); viewBtn.dataset.inited = 'true'; }
+    }
+    
+    const topbarEl = document.querySelector('#requestsContainer .requests-topbar'); if (topbarEl) { try { topbarEl.remove(); } catch(_){} }
+    // Remover elementos redundantes de "Nueva solicitud" según nuevo flujo
+    const topNewBtn = document.getElementById('requestNewBtn'); if (topNewBtn) { try { topNewBtn.remove(); } catch(_){} }
+    const newBreadcrumb = modal.querySelector('#requestNewPanel .details-breadcrumb'); if (newBreadcrumb) { try { newBreadcrumb.remove(); } catch(_){} }
+    const newCancelBtn = document.getElementById('requestNewCancel'); if (newCancelBtn) { try { newCancelBtn.remove(); } catch(_){} }
+    const fMy = document.getElementById('rqFilterMy'); if (fMy && !fMy.dataset.inited) { fMy.addEventListener('click', () => { requestsState.filterMode = null; const b = document.getElementById('rqMenuMy'); if (b) b.click(); else setRequestsView('my'); }); fMy.dataset.inited = 'true'; }
+    const fClsAll = document.getElementById('rqFilterClosedAll'); if (fClsAll && !fClsAll.dataset.inited) { fClsAll.addEventListener('click', () => { requestsState.filterMode = 'closed_all'; setClosedActive('all'); updateRequestsList(); }); fClsAll.dataset.inited = 'true'; }
+    const fClsMine = document.getElementById('rqFilterClosedMine'); if (fClsMine && !fClsMine.dataset.inited) { fClsMine.addEventListener('click', () => { requestsState.filterMode = 'closed_my'; setRequestsView('my'); setClosedActive('mine'); updateRequestsList(); }); fClsMine.dataset.inited = 'true'; }
+    setupRequestsSearch();
+
+    if (requestsState.lastOption && requestsState.lastOption !== 'menu') {
+      const opt = requestsState.lastOption;
+      const input = document.getElementById('requestsSearchInput');
+      if (opt === 'closed') { requestsState.query = 'Culminado'; }
+      if (menuView) menuView.classList.remove('show');
+      if (opt !== 'search' && container) container.hidden = false;
+      ensureBackArrow();
+      if (opt === 'my') setRequestsView('my');
+      else if (opt === 'received') setRequestsView('received');
+      else if (opt === 'search') {
+        const v = document.getElementById('requestsSearchView') || (content && content.querySelector('#requestsSearchView'));
+        let viewEl = v;
+        if (!viewEl) {
+          viewEl = document.createElement('div');
+          viewEl.id = 'requestsSearchView';
+          viewEl.className = 'requests-view';
+          viewEl.innerHTML = '<div class="search-view"><form id="requestsSearchForm" class="search-form" aria-label="Buscar solicitudes"><div class="menu-section"><div class="menu-title">Especificaciones</div><div class="search-grid"><label class="field"><span>Reportado por</span><input id="rqSearchReported" type="text" class="menu-input" /></label><label class="field"><span>ID del problema</span><input id="rqSearchId" type="text" class="menu-input" /></label><label class="field"><span>Asignado a</span><select id="rqSearchAssigned" class="menu-select"><option value="">Cualquiera</option></select></label><label class="field"><span>Categoría</span><input id="rqSearchCategory" type="text" class="menu-input" /></label><label class="field"><span>Departamento</span><select id="rqSearchDept" class="menu-select"><option value="">Cualquiera</option></select></label><label class="field"><span>Estado</span><select id="rqSearchStatus" class="menu-select"><option value="">Cualquiera</option><option value="Culminado">Culminado</option><option value="En curso">En curso</option><option value="Bloqueado">Bloqueado</option><option value="Bajo revisión">Bajo revisión</option></select></label><label class="field"><span>Prioridad</span><input id="rqSearchPriority" type="text" class="menu-input" /></label></div></div><div class="menu-section"><div class="menu-title">Contiene</div><div class="search-grid"><label class="field"><span>Palabras clave</span><input id="rqSearchKeywords" type="text" class="menu-input" /></label><div class="search-checkboxes"><label><input id="rqSFTitle" type="checkbox" checked /> Título</label><label><input id="rqSFDesc" type="checkbox" checked /> Descripción</label><label><input id="rqSFSolution" type="checkbox" checked /> Solución</label></div></div></div><div class="menu-section"><div class="menu-title">Orden y fechas</div><div class="search-grid"><label class="field"><span>Ordenar por</span><select id="rqSearchOrderBy" class="menu-select"><option value="">Predeterminado</option><option value="fecha">Fecha</option><option value="estado">Estado</option><option value="responsable">Responsable</option><option value="equipo">Departamento</option><option value="objetivo">Título</option><option value="id">ID</option></select></label><label class="field"><span>Desde</span><input id="rqSearchFrom" type="date" class="menu-input" /></label><label class="field"><span>Hasta</span><input id="rqSearchTo" type="date" class="menu-input" /></label></div></div></form></div>';
+          if (content) content.appendChild(viewEl);
+        }
+        const svContainer2 = (viewEl && viewEl.querySelector('.search-view')) || viewEl;
+        if (svContainer2 && !svContainer2.querySelector('.requests-topbar')) {
+          const tb2 = document.createElement('div');
+          tb2.className = 'requests-topbar';
+          tb2.innerHTML = '<div class="menu-title">Buscar solicitudes</div><div class="menu-actions"><button type="submit" id="rqSearchSubmitTop" class="modal-add-btn" form="requestsSearchForm">Buscar</button></div>';
+          svContainer2.insertBefore(tb2, svContainer2.firstChild);
+        }
+        const names = Array.from(new Set(requestsState.all.map(r => r?.responsable).filter(Boolean)));
+        const depts = Array.from(new Set(requestsState.all.map(r => r?.equipo).filter(Boolean)));
+        const selA = document.getElementById('rqSearchAssigned');
+        const selD = document.getElementById('rqSearchDept');
+        if (selA && !selA.dataset.filled) { selA.innerHTML = '<option value="">Cualquiera</option>' + names.map(n=>`<option value="${n}">${n}</option>`).join(''); selA.dataset.filled='true'; }
+        if (selD && !selD.dataset.filled) { selD.innerHTML = '<option value="">Cualquiera</option>' + depts.map(n=>`<option value="${n}">${n}</option>`).join(''); selD.dataset.filled='true'; }
+        if (requestsState.criteria) {
+          const set = (id,v) => { const el = document.getElementById(id); if (el) el.value = v||''; };
+          const setB = (id,v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
+          set('rqSearchReported', requestsState.criteria.reportedBy);
+          set('rqSearchId', requestsState.criteria.id);
+          set('rqSearchAssigned', requestsState.criteria.assignedTo);
+          set('rqSearchCategory', requestsState.criteria.category);
+          set('rqSearchDept', requestsState.criteria.department);
+          set('rqSearchStatus', requestsState.criteria.status);
+          set('rqSearchPriority', requestsState.criteria.priority);
+          set('rqSearchKeywords', requestsState.criteria.keywords);
+          setB('rqSFTitle', requestsState.criteria.fields?.title);
+          setB('rqSFDesc', requestsState.criteria.fields?.description);
+          setB('rqSFSolution', requestsState.criteria.fields?.solution);
+          set('rqSearchOrderBy', requestsState.criteria.orderBy);
+          set('rqSearchFrom', requestsState.criteria.dateFrom);
+          set('rqSearchTo', requestsState.criteria.dateTo);
+          let resultsWrap2 = document.getElementById('requestsSearchResults');
+          let resultsView2 = document.getElementById('requestsResultsView');
+          if (!resultsWrap2) {
+            resultsWrap2 = document.createElement('div');
+            resultsWrap2.id = 'requestsSearchResults';
+            resultsWrap2.className = 'search-results';
+            resultsWrap2.innerHTML = '<div class="sr-header">Resultados de búsqueda</div><table class="sr-table" aria-label="Resultados"><thead><tr><th>ID</th><th>Título</th><th>Usuario</th><th>Asignado a</th><th>Fecha</th><th>Estado</th></tr></thead><tbody id="srTbody"></tbody></table><div class="sr-actions"><button type="button" id="rqSearchAgain" class="modal-secondary-btn">Buscar de nuevo</button></div>';
+          }
+          if (!resultsView2 && content) {
+            resultsView2 = document.createElement('div');
+            resultsView2.id = 'requestsResultsView';
+            resultsView2.className = 'requests-view';
+            resultsView2.appendChild(resultsWrap2);
+            content.appendChild(resultsView2);
+          }
+          const base = requestsState.all;
+          const filtered = filterRequestsAdvanced(base, requestsState.criteria);
+          const tbody = document.getElementById('srTbody');
+          const submitBtn = document.getElementById('rqSearchSubmit');
+          const submitTop = document.getElementById('rqSearchSubmitTop');
+          const formEl2 = document.getElementById('requestsSearchForm');
+          const bottomActions2 = formEl2 && formEl2.querySelector('.form-actions'); if (bottomActions2) { try { bottomActions2.remove(); } catch(_){} }
+          const bottomBtn2 = document.getElementById('rqSearchSubmit'); if (bottomBtn2) { try { bottomBtn2.remove(); } catch(_){} }
+          let resultsView = resultsView2;
+          if (tbody) {
+            tbody.innerHTML = (Array.isArray(filtered) && filtered.length)
+              ? filtered.map(r => `<tr><td>${r.id||'—'}</td><td>${r.objetivo||''}</td><td>${r.user||'—'}</td><td>${r.responsable||'—'}</td><td>${r.fecha||''}</td><td>${statusLabel(r.estado)}</td></tr>`).join('')
+              : '<tr><td colspan="6" class="sr-empty">No se encontraron resultados.</td></tr>';
+          }
+          const sv = document.getElementById('requestsSearchView');
+          if (sv) { sv.classList.remove('show'); sv.hidden = true; }
+          if (resultsView) { resultsView.hidden = false; void resultsView.offsetWidth; resultsView.classList.add('show'); }
+          if (submitBtn && !submitBtn.dataset.inited) {
+            submitBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              const form = document.getElementById('requestsSearchForm');
+              if (form && typeof form.requestSubmit === 'function') form.requestSubmit();
+              else if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            });
+            submitBtn.dataset.inited = 'true';
+          }
+          if (submitTop && !submitTop.dataset.inited) {
+            submitTop.addEventListener('click', (e) => {
+              e.preventDefault();
+              const form = document.getElementById('requestsSearchForm');
+              if (form && typeof form.requestSubmit === 'function') form.requestSubmit();
+              else if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            });
+            submitTop.dataset.inited = 'true';
+          }
+          const againBtn = document.getElementById('rqSearchAgain');
+          if (againBtn && !againBtn.dataset.inited) {
+            againBtn.addEventListener('click', () => {
+              const rv = document.getElementById('requestsResultsView');
+              const sv = document.getElementById('requestsSearchView');
+              if (rv) rv.classList.remove('show'); if (rv) rv.hidden = true;
+              if (sv) { sv.hidden = false; void sv.offsetWidth; sv.classList.add('show'); }
+            });
+            againBtn.dataset.inited = 'true';
+          }
+        }
+        if (!requestsState.criteria) { viewEl.hidden = false; void viewEl.offsetWidth; viewEl.classList.add('show'); } else { viewEl.classList.remove('show'); viewEl.hidden = true; }
+      }
+      else if (opt === 'new') openNewRequestForm();
+      else setRequestsView('my');
+      updateSuggestionsUI(requestsState.query);
+      updateRequestsList();
+    } else {
+      if (container) container.hidden = true;
+      if (backBtn) backBtn.hidden = true;
+      if (menuView) menuView.classList.add('show');
+    }
     trapFocus(modal);
     const backdrop = modal.querySelector('.modal-backdrop');
     const close = () => closeRequestsModal();
@@ -1889,6 +2332,11 @@ function openChartModal(defaultId, previewType) {
       modal.classList.remove('show');
       modal.classList.remove('closing');
       modal.setAttribute('hidden','true');
+      try { modal.style.display = ''; modal.style.visibility = ''; } catch (_) {}
+      const sv = document.getElementById('requestsSearchView');
+      const rv = document.getElementById('requestsResultsView');
+      if (sv) { sv.classList.remove('show'); sv.hidden = true; }
+      if (rv) { rv.classList.remove('show'); rv.hidden = true; }
     }, 180);
   }
 
@@ -1908,12 +2356,18 @@ function openChartModal(defaultId, previewType) {
     const panel = document.getElementById('requestNewPanel');
     const listPanel = document.getElementById('requestsListPanel');
     const container = document.getElementById('requestsContainer');
+    const topbar = document.querySelector('#requestsContainer .requests-topbar');
+    const filtersBar = document.querySelector('#requestsContainer .requests-filters');
     if (!panel || !listPanel) return;
     panel.hidden = false;
     panel.setAttribute('aria-hidden','false');
     void panel.offsetWidth;
     panel.classList.add('show');
-    listPanel.classList.add('dimmed');
+    // Ocultar navegación y búsqueda al crear nueva solicitud
+    if (topbar) { topbar.hidden = true; }
+    if (filtersBar) { filtersBar.hidden = true; }
+    // Ocultar la lista para evitar distracciones durante la creación
+    listPanel.hidden = true;
     if (container) container.classList.add('overlaying');
     const first = document.getElementById('reqNewUser');
     if (first) first.focus();
@@ -1923,11 +2377,16 @@ function openChartModal(defaultId, previewType) {
     const panel = document.getElementById('requestNewPanel');
     const listPanel = document.getElementById('requestsListPanel');
     const container = document.getElementById('requestsContainer');
+    const topbar = document.querySelector('#requestsContainer .requests-topbar');
+    const filtersBar = document.querySelector('#requestsContainer .requests-filters');
     if (!panel || !listPanel) return;
     panel.classList.remove('show');
-    listPanel.classList.remove('dimmed');
     panel.setAttribute('aria-hidden','true');
     panel.hidden = true;
+    // Restaurar navegación y búsqueda
+    if (topbar) { topbar.hidden = false; }
+    if (filtersBar) { filtersBar.hidden = false; }
+    listPanel.hidden = false;
     if (container) container.classList.remove('overlaying');
   }
 

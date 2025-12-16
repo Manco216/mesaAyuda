@@ -24,7 +24,6 @@
         <a href="https://drive.google.com/file/d/1sG94XW0CLRHV3pqKZxALqc8Q4Pq2EnRA/view" class="sidebar-item" target="_blank" rel="noopener"><span class="sidebar-icon" data-lucide="file-text"></span><span>Manual Interactivo</span></a>
         <a href="https://drive.google.com/file/d/1YnlgdMOOAyz80l8D66bHhvPe0jNTkq5W/view" class="sidebar-item" target="_blank" rel="noopener"><span class="sidebar-icon" data-lucide="shield"></span><span>Política de seguridad</span></a>
         <a href="#" class="sidebar-item" data-page="documents"><span class="sidebar-icon" data-lucide="folder-open"></span><span>Documentos de operaciones TI</span></a>
-        <a href="./editar.html" class="sidebar-item" data-page="editar"><span class="sidebar-icon" data-lucide="square-pen"></span><span>Editar</span></a>
       </nav>
     </template>
 
@@ -190,19 +189,7 @@
           </div>
           <div class="modal-content">
             <div class="requests-container" id="requestsContainer">
-              <div class="requests-topbar" role="toolbar" aria-label="Navegación de peticiones">
-                <div class="tabs" role="tablist">
-                  <button id="reqTabMy" class="tab-btn active" role="tab" aria-selected="true">Mis Peticiones</button>
-                  <button id="reqTabReceived" class="tab-btn" role="tab" aria-selected="false">Peticiones Recibidas</button>
-                </div>
-                <div class="search-row" role="search">
-                  <div class="search-input-wrap">
-                    <input id="requestsSearchInput" type="text" placeholder="Buscar" aria-label="Buscar peticiones" autocomplete="off" />
-                    <ul id="requestsSearchSuggestions" class="search-suggestions" hidden aria-label="Sugerencias"></ul>
-                  </div>
-                  <button id="requestNewBtn" type="button" class="modal-add-btn" aria-label="Nueva petición">Nueva petición</button>
-                </div>
-              </div>
+              <div class="requests-filters"><div class="filters-row"><button id="rqFilterMy" class="tab-btn" type="button">Mis Peticiones</button><div class="filters-closed"><button id="rqFilterClosedAll" class="tab-btn" type="button">Todos cerrados</button><button id="rqFilterClosedMine" class="tab-btn" type="button">Mis cerradas</button></div><div class="search-input-wrap"><input id="requestsSearchInput" type="text" placeholder="Buscar" aria-label="Buscar peticiones" autocomplete="off" /><ul id="requestsSearchSuggestions" class="search-suggestions" hidden aria-label="Sugerencias"></ul></div></div></div>
               <div id="requestsListPanel" class="requests-panel">
                 <ul id="requestsList" class="requests-list" aria-live="polite" aria-label="Lista de peticiones"></ul>
               </div>

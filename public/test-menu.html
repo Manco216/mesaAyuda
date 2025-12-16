@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pruebas menú desplegable</title>
+    <link rel="stylesheet" href="../src/App.css" />
+    <link rel="stylesheet" href="../src/styles.css" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>window.global = window;</script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="results" style="padding:12px"></div>
+    <script src="../src/menu.js"></script>
+    <script src="../src/app.js"></script>
+    <script src="../src/main.js"></script>
+    <script>
+      (function(){
+        const results = [];
+        function assert(name, cond) {
+          results.push({ name, ok: !!cond });
+        }
+        function flush() {
+          const box = document.getElementById('results');
+          box.innerHTML = '<h3>Resultados</h3>' + results.map(r => `<div>${r.ok ? '✅' : '❌'} ${r.name}</div>`).join('');
+        }
+        function afterInit(cb){ setTimeout(cb, 120); }
+        afterInit(() => {
+          try {
+            state.activePage = 'dashboard';
+            render();
+            if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+            const btn = document.getElementById('header-profile');
+            const menu = document.getElementById('header-menu');
+            assert('Renderiza botón de perfil', !!btn);
+            assert('Renderiza menú del header', !!menu);
+            assert('Incluye opción Personaliza en dashboard', !!menu.querySelector('[data-action="customize-dashboard"]'));
+
+            state.activePage = 'planning';
+            render(); if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+            const menu2 = document.getElementById('header-menu');
+            assert('Oculta Personaliza fuera del dashboard', !menu2.querySelector('[data-action="customize-dashboard"]'));
+
+            // Abrir y cerrar con click
+            const btn2 = document.getElementById('header-profile');
+            const menu3 = document.getElementById('header-menu');
+            btn2.click();
+            assert('Menú se abre al pulsar el icono', !menu3.hidden && menu3.classList.contains('show'));
+            document.body.click();
+            assert('Menú se cierra al hacer clic fuera', menu3.hidden);
+
+            // Abrir y cerrar con teclado
+            btn2.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+            const menu4 = document.getElementById('header-menu');
+            assert('Menú se abre con teclado', !menu4.hidden);
+            menu4.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+            assert('Menú se cierra con Escape', document.getElementById('header-menu').hidden);
+
+            // Íconos presentes
+            const menu5 = document.getElementById('header-menu');
+            assert('Cada opción tiene ícono', Array.from(menu5.querySelectorAll('.header-menu-item')).every(el => !!el.querySelector('[data-lucide]')));
+
+          } catch (e) {
+            assert('Errores durante pruebas: ' + (e && e.message ? e.message : e), false);
+          }
+          flush();
+        });
+      })();
+    </script>
+  </body>
+  </html>

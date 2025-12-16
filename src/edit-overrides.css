@@ -4,6 +4,8 @@
 .edit-field label { color: var(--color-text); font-size: inherit; }
 .edit-field input[type="text"],
 .edit-field input[type="password"],
+.edit-field input[type="tel"],
+.edit-field input[type="email"],
 .edit-field select {
   background: var(--surface);
   color: var(--color-text);
@@ -29,6 +31,8 @@
 .theme-dark .edit-field label { color: var(--color-text); }
 .theme-dark .edit-field input[type="text"],
 .theme-dark .edit-field input[type="password"],
+.theme-dark .edit-field input[type="tel"],
+.theme-dark .edit-field input[type="email"],
 .theme-dark .edit-field select {
   background: #111827;
   color: var(--color-text);
