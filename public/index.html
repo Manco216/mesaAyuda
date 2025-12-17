@@ -272,6 +272,278 @@
         </form>
       </section>
     </template>
+    <template id="adma-users-template">
+      <section class="admin-config" aria-label="Administrar usuarios">
+        <header class="admin-config-header">
+          <h2>Administrar usuarios</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+          </div>
+        </header>
+        <form class="admin-form">
+          <div class="form-grid two users-grid">
+            <div class="form-field">
+              <label>Lista de usuarios</label>
+              <input id="usersSearch" type="text" placeholder="Buscar por nombre, usuario o correo">
+              <div id="usersList" class="listbox custom-list" role="listbox" aria-label="Usuarios" tabindex="0"></div>
+            </div>
+            <div class="form-field admin-actions-vertical">
+              <button type="button" class="admin-config-btn primary" data-action="edit-user"><span data-lucide="pencil"></span><span>Editar cuenta de usuario</span></button>
+              <button type="button" class="admin-config-btn" data-action="add-user"><span data-lucide="user-plus"></span><span>Agregar usuarios nuevos</span></button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-user-edit-template">
+      <section class="admin-config" aria-label="Actualizar información de usuario">
+        <header class="admin-config-header">
+          <h2>Actualizar información</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="save-user"><span data-lucide="save"></span><span>Grabar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="editUserForm">
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="userUsername">Nombre de usuario</label>
+              <input id="userUsername" type="text" readonly>
+            </div>
+            <div class="form-field">
+              <label for="userFirstName">Nombre</label>
+              <input id="userFirstName" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="userLastName">Apellido</label>
+              <input id="userLastName" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="userEmail">Dirección de correo</label>
+              <input id="userEmail" type="email" required>
+            </div>
+            <div class="form-field">
+              <label for="userPhone">Numero de teléfono</label>
+              <input id="userPhone" type="tel">
+            </div>
+            <div class="form-field">
+              <label for="userLocation">Ubicación</label>
+              <select id="userLocation"></select>
+            </div>
+            <div class="form-field">
+              <label for="userDept">Departamento</label>
+              <select id="userDept"></select>
+            </div>
+            <div class="form-field">
+              <label for="userLanguage">Idioma</label>
+              <select id="userLanguage">
+                <option value="es">Spanish (Español)</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid two">
+            <div class="form-field" style="grid-column:1 / -1">
+              <div class="section-subtitle">Representante de soporte</div>
+            </div>
+            <div class="form-field">
+              <label for="userSupportRep">Habilitar</label>
+              <input id="userSupportRep" type="checkbox">
+            </div>
+            <div class="form-field">
+              <label for="userAccessLevel">Nivel de acceso</label>
+              <select id="userAccessLevel">
+                <option value="normal">Normal</option>
+                <option value="restricted">Restringido</option>
+                <option value="read-only">Solo lectura</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid two">
+            <div class="form-field" style="grid-column:1 / -1">
+              <div class="section-subtitle">Contraseña</div>
+            </div>
+            <div class="form-field">
+              <label for="userPassNew">Nueva contraseña</label>
+              <input id="userPassNew" type="password">
+            </div>
+            <div class="form-field">
+              <label for="userPassConfirm">Confirme la contraseña</label>
+              <input id="userPassConfirm" type="password">
+            </div>
+          </div>
+          <div class="form-actions" style="text-align:center">
+            <button type="button" class="danger-btn" data-action="delete-user">Borrar cuenta</button>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-user-create-template">
+      <section class="admin-config" aria-label="Agregar usuarios nuevos">
+        <header class="admin-config-header">
+          <h2>Agregar usuarios nuevos</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="create-user"><span data-lucide="save"></span><span>Grabar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="createUserForm">
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="newUserUsername">Nombre de usuario</label>
+              <input id="newUserUsername" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="newUserFirstName">Nombre</label>
+              <input id="newUserFirstName" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="newUserLastName">Apellido</label>
+              <input id="newUserLastName" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="newUserEmail">Dirección de correo</label>
+              <input id="newUserEmail" type="email" required>
+            </div>
+            <div class="form-field">
+              <label for="newUserPhone">Numero de teléfono</label>
+              <input id="newUserPhone" type="tel">
+            </div>
+            <div class="form-field">
+              <label for="newUserLocation">Ubicación</label>
+              <select id="newUserLocation"></select>
+            </div>
+            <div class="form-field">
+              <label for="newUserDept">Departamento</label>
+              <select id="newUserDept"></select>
+            </div>
+            <div class="form-field">
+              <label for="newUserLanguage">Idioma</label>
+              <select id="newUserLanguage">
+                <option value="es">Spanish (Español)</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid two">
+            <div class="form-field" style="grid-column:1 / -1">
+              <div class="section-subtitle">Representante de soporte</div>
+            </div>
+            <div class="form-field">
+              <label for="newUserSupportRep">Habilitar</label>
+              <input id="newUserSupportRep" type="checkbox">
+            </div>
+            <div class="form-field">
+              <label for="newUserAccessLevel">Nivel de acceso</label>
+              <select id="newUserAccessLevel">
+                <option value="normal">Normal</option>
+                <option value="restricted">Restringido</option>
+                <option value="read-only">Solo lectura</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid two">
+            <div class="form-field" style="grid-column:1 / -1">
+              <div class="section-subtitle">Contraseña</div>
+            </div>
+            <div class="form-field">
+              <label for="newUserPass">Nueva contraseña</label>
+              <input id="newUserPass" type="password">
+            </div>
+            <div class="form-field">
+              <label for="newUserPassConfirm">Confirme la contraseña</label>
+              <input id="newUserPassConfirm" type="password">
+            </div>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-categories-template">
+      <section class="admin-config" aria-label="Administrar categorías">
+        <header class="admin-config-header">
+          <h2>Categorías</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="categoriesForm" novalidate>
+          <div class="form-grid two">
+            <div class="form-field" style="grid-column:1 / -1">
+              <label for="categoriesSearch">Buscar</label>
+              <input id="categoriesSearch" type="text" placeholder="Filtrar por nombre o representante">
+            </div>
+          </div>
+          <div class="form-grid one">
+            <div class="form-field" style="grid-column:1 / -1">
+              <table class="admin-table" aria-label="Listado de categorías">
+                <thead>
+                  <tr>
+                    <th>Categoria</th>
+                    <th>Representante</th>
+                    <th>Modificar</th>
+                  </tr>
+                </thead>
+                <tbody id="categoriesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="form-actions" style="text-align:center">
+            <button type="button" class="admin-config-btn primary" data-action="add-category"><span data-lucide="plus"></span><span>Agregar nueva categoría</span></button>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-category-edit-template">
+      <section class="admin-config" aria-label="Editar categoría">
+        <header class="admin-config-header">
+          <h2>Editar categoría</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="save-category"><span data-lucide="save"></span><span>Grabar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="editCategoryForm" novalidate>
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="catName">Nombre de la categoría</label>
+              <input id="catName" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="catRep">Representante</label>
+              <input id="catRep" type="text" list="catRepList" placeholder="Usuario responsable">
+              <datalist id="catRepList"></datalist>
+            </div>
+          </div>
+          <div class="form-actions" style="text-align:center">
+            <button type="button" class="danger-btn" data-action="delete-category">Borrar</button>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-category-create-template">
+      <section class="admin-config" aria-label="Agregar categoría">
+        <header class="admin-config-header">
+          <h2>Agregar categoría</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="create-category"><span data-lucide="save"></span><span>Grabar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="createCategoryForm" novalidate>
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="newCatName">Nombre de la categoría</label>
+              <input id="newCatName" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="newCatRep">Representante</label>
+              <input id="newCatRep" type="text" list="catRepList" placeholder="Usuario responsable">
+              <datalist id="catRepList"></datalist>
+            </div>
+          </div>
+        </form>
+      </section>
+    </template>
     <!-- Plantilla HTML editable del Dashboard removida de index -->
 
     
