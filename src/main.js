@@ -25,6 +25,9 @@ const state = {
   admaPassword: '',
   admaView: null,
   siteConfig: {},
+  users: [],
+  selectedUserId: null,
+  usersQuery: '',
   // Estado de colapso del menú lateral (inicia oculto hasta que el usuario haga clic)
   sidebarCollapsed: true,
   // Preferencias de interfaz y usuario
@@ -251,6 +254,8 @@ const resolveAsset = (relativePath) => {
 
 // ----- Preferencias (persistencia y aplicación) -----
 const PREFS_KEY = 'socya:prefs';
+const USERS_KEY = 'socya:users';
+const CATEGORIES_KEY = 'socya:categories';
 const loadPrefs = () => {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
@@ -273,6 +278,46 @@ const loadPrefs = () => {
   } catch (_) { /* ignore */ }
 };
 const savePrefs = () => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(state.preferences)); } catch (_) { /* ignore */ } };
+const showNotice = (msg, type = 'success') => {
+  try {
+    const el = document.createElement('div');
+    el.className = `notice-toast ${type}`;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => { el.classList.add('show'); });
+    setTimeout(() => { el.classList.remove('show'); setTimeout(() => { el.remove(); }, 180); }, 2000);
+  } catch (_) {}
+};
+const loadUsers = () => {
+  try {
+    const raw = localStorage.getItem(USERS_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) { state.users = arr; return; }
+    }
+  } catch (_) {}
+  state.users = [
+    { id: 1, username: 'aaguirre', firstName: 'Alejandro', lastName: 'Aguirre Gutiérrez', email: 'aaguirre@socya.org.co', phone: '3184695944', location: 'pereira', orgDept: 'ti', language: 'es', supportRep: false, accessLevel: 'normal' },
+    { id: 2, username: 'aarango', firstName: 'Alexander', lastName: 'Arango Sánchez', email: 'aarango@socya.org.co', phone: '', location: 'medellin', orgDept: 'ti', language: 'es', supportRep: false, accessLevel: 'normal' },
+    { id: 3, username: 'abarboleda', firstName: 'Angie Paola', lastName: 'Arboleda Marquez', email: 'abarboleda@socya.org.co', phone: '', location: 'bogota', orgDept: 'operaciones', language: 'es', supportRep: false, accessLevel: 'normal' },
+  ];
+};
+const saveUsers = () => { try { localStorage.setItem(USERS_KEY, JSON.stringify(state.users)); } catch (_) {} };
+const loadCategories = () => {
+  try {
+    const raw = localStorage.getItem(CATEGORIES_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) { state.categories = arr; return; }
+    }
+  } catch (_) {}
+  state.categories = [
+    { id: 1, name: 'TI: Servidores', representative: 'acaro' },
+    { id: 2, name: 'CI: Actualización intranet', representative: 'lmjaramillo' },
+    { id: 3, name: 'CAD: Procesos', representative: 'srico' },
+  ];
+};
+const saveCategories = () => { try { localStorage.setItem(CATEGORIES_KEY, JSON.stringify(state.categories)); } catch (_) {} };
 const setCssVar = (name, value) => { document.documentElement.style.setProperty(name, value); };
 // Valores de marca por defecto (coinciden con :root en CSS)
 const DEFAULT_BRAND = { primary: '#0c2340', secondary: '#7e63d4', accent: '#7c3aed' };
@@ -962,6 +1007,148 @@ const render = () => {
         const passTpl = getTemplateHTML('adma-change-pass-template');
         if (passTpl) return passTpl;
         return `<section class="admin-config"><h2>Cambiar la contraseña del administrador</h2></section>`;
+      } else if (state.admaView === 'usersList') {
+        const listTpl = getTemplateHTML('adma-users-template');
+        if (listTpl) return listTpl;
+        return `<section class="admin-config"><h2>Administrar usuarios</h2></section>`;
+      } else if (state.admaView === 'userEdit') {
+        const editTpl = getTemplateHTML('adma-user-edit-template');
+        if (editTpl) return editTpl;
+        return `<section class="admin-config"><h2>Actualizar información</h2></section>`;
+      } else if (state.admaView === 'userCreate') {
+        const createTpl = getTemplateHTML('adma-user-create-template');
+        if (createTpl) return createTpl;
+        return `<section class="admin-config"><h2>Agregar usuarios nuevos</h2></section>`;
+      } else if (state.admaView === 'categoriesList') {
+        loadCategories();
+        loadUsers();
+        const backBtn = document.querySelector('.admin-config [data-action="back"]');
+        const addBtn = document.querySelector('.admin-config [data-action="add-category"]');
+        const search = document.getElementById('categoriesSearch');
+        const tbody = document.getElementById('categoriesTableBody');
+        const renderRows = () => {
+          const q = (state.categoriesQuery || '').toLowerCase().trim();
+          const filtered = q
+            ? state.categories.filter(c => {
+                const s = [c.name, c.representative].join(' ').toLowerCase();
+                return s.includes(q);
+              })
+            : state.categories;
+          if (tbody) {
+            tbody.innerHTML = filtered.map(c => `
+              <tr data-id="${c.id}">
+                <td>${c.name}</td>
+                <td>${c.representative || '—'}</td>
+                <td>
+                  <div class="row-actions">
+                    <button type="button" class="admin-config-btn" data-action="edit" data-id="${c.id}"><span data-lucide="pencil"></span><span>Editar</span></button>
+                    <button type="button" class="admin-config-btn" data-action="delete" data-id="${c.id}"><span data-lucide="trash-2"></span><span>Borrar</span></button>
+                  </div>
+                </td>
+              </tr>
+            `).join('');
+          }
+        };
+        if (tbody && !tbody.dataset.bound) {
+          renderRows();
+          tbody.addEventListener('click', (e) => {
+            const btn = e.target.closest('button.admin-config-btn');
+            if (!btn) return;
+            const id = Number(btn.dataset.id);
+            if (btn.dataset.action === 'edit') { state.selectedCategoryId = id; state.admaView = 'categoryEdit'; render(); return; }
+            if (btn.dataset.action === 'delete') {
+              state.categories = state.categories.filter(x => x.id !== id);
+              saveCategories();
+              showNotice(tr('Categoría eliminada','Category deleted'),'success');
+              renderRows();
+            }
+          });
+          tbody.dataset.bound = '1';
+        }
+        if (search && !search.dataset.bound) {
+          search.addEventListener('input', () => { state.categoriesQuery = search.value || ''; renderRows(); });
+          search.dataset.bound = '1';
+        }
+        if (addBtn && !addBtn.dataset.bound) {
+          addBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'categoryCreate'; render(); });
+          addBtn.dataset.bound = '1';
+        }
+        if (backBtn && !backBtn.dataset.bound) {
+          backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); });
+          backBtn.dataset.bound = '1';
+        }
+        renderIcons();
+      } else if (state.admaView === 'categoryEdit') {
+        loadCategories();
+        loadUsers();
+        const backBtn = document.querySelector('.admin-config [data-action="back"]');
+        const saveBtn = document.querySelector('.admin-config [data-action="save-category"]');
+        const delBtn = document.querySelector('.admin-config [data-action="delete-category"]');
+        const c = state.categories.find(x => x.id === state.selectedCategoryId);
+        if (!c) { state.admaView = 'categoriesList'; render(); return; }
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+        setVal('catName', c.name);
+        setVal('catRep', c.representative || '');
+        const dl = document.getElementById('catRepList');
+        if (dl) dl.innerHTML = state.users.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
+        if (backBtn && !backBtn.dataset.bound) {
+          backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'categoriesList'; render(); });
+          backBtn.dataset.bound = '1';
+        }
+        if (saveBtn && !saveBtn.dataset.bound) {
+          saveBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const name = (document.getElementById('catName')?.value || '').trim();
+            if (!name) { showNotice(tr('Ingrese el nombre','Enter the name'),'error'); return; }
+            const representative = (document.getElementById('catRep')?.value || '').trim();
+            state.categories = state.categories.map(x => x.id === c.id ? { ...x, name, representative } : x);
+            saveCategories();
+            showNotice(tr('Categoría actualizada','Category updated'),'success');
+            state.admaView = 'categoriesList';
+            render();
+          });
+          saveBtn.dataset.bound = '1';
+        }
+        if (delBtn && !delBtn.dataset.bound) {
+          delBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            state.categories = state.categories.filter(x => x.id !== c.id);
+            saveCategories();
+            showNotice(tr('Categoría eliminada','Category deleted'),'success');
+            state.selectedCategoryId = null;
+            state.admaView = 'categoriesList';
+            render();
+          });
+          delBtn.dataset.bound = '1';
+        }
+        renderIcons();
+      } else if (state.admaView === 'categoryCreate') {
+        loadCategories();
+        loadUsers();
+        const backBtn = document.querySelector('.admin-config [data-action="back"]');
+        const saveBtn = document.querySelector('.admin-config [data-action="create-category"]');
+        const dl = document.getElementById('catRepList');
+        if (dl) dl.innerHTML = state.users.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
+        if (backBtn && !backBtn.dataset.bound) {
+          backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'categoriesList'; render(); });
+          backBtn.dataset.bound = '1';
+        }
+        if (saveBtn && !saveBtn.dataset.bound) {
+          saveBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const name = (document.getElementById('newCatName')?.value || '').trim();
+            if (!name) { showNotice(tr('Ingrese el nombre','Enter the name'),'error'); return; }
+            const representative = (document.getElementById('newCatRep')?.value || '').trim();
+            const nextId = (state.categories.reduce((m, x) => Math.max(m, x.id), 0) + 1) || 1;
+            state.categories.push({ id: nextId, name, representative });
+            saveCategories();
+            showNotice(tr('Categoría creada','Category created'),'success');
+            state.admaView = 'categoriesList';
+            render();
+          });
+          saveBtn.dataset.bound = '1';
+        }
+        renderIcons();
       } else {
         const tpl = getTemplateHTML('adma-template');
         if (tpl) return tpl;
@@ -1095,7 +1282,7 @@ const render = () => {
             maxImageSize: val('cfgMaxImage'),
           };
           try { localStorage.setItem('socya:siteConfig', JSON.stringify(state.siteConfig)); } catch(_) {}
-          alert(tr('Configuración guardada','Settings saved'));
+          showNotice(tr('Configuración guardada','Settings saved'),'success');
         });
         saveBtn.dataset.bound = '1';
       }
@@ -1114,12 +1301,167 @@ const render = () => {
           const next = (document.getElementById('adminPassNew')?.value || '').trim();
           const conf = (document.getElementById('adminPassConfirm')?.value || '').trim();
           const expected = loadAdminPass();
-          if (cur !== expected) { alert(tr('Contraseña actual incorrecta','Current password incorrect')); return; }
-          if (!next || next.length < 4) { alert(tr('La nueva contraseña es muy corta','New password too short')); return; }
-          if (next !== conf) { alert(tr('Las contraseñas no coinciden','Passwords do not match')); return; }
+          if (cur !== expected) { showNotice(tr('Contraseña actual incorrecta','Current password incorrect'),'error'); return; }
+          if (!next || next.length < 4) { showNotice(tr('La nueva contraseña es muy corta','New password too short'),'error'); return; }
+          if (next !== conf) { showNotice(tr('Las contraseñas no coinciden','Passwords do not match'),'error'); return; }
           saveAdminPass(next);
-          alert(tr('Contraseña actualizada','Password updated'));
+          showNotice(tr('Contraseña actualizada','Password updated'),'success');
           state.admaView = null;
+          render();
+        });
+        saveBtn.dataset.bound = '1';
+      }
+      renderIcons();
+    } else if (state.admaView === 'usersList') {
+      loadUsers();
+      const list = document.getElementById('usersList');
+      const editBtn = document.querySelector('.admin-config [data-action="edit-user"]');
+      const addBtn = document.querySelector('.admin-config [data-action="add-user"]');
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const search = document.getElementById('usersSearch');
+      const renderList = () => {
+        const q = (state.usersQuery || '').toLowerCase().trim();
+        const filtered = q
+          ? state.users.filter(u => {
+              const s = [u.username, u.firstName, u.lastName, u.email].join(' ').toLowerCase();
+              return s.includes(q);
+            })
+          : state.users;
+        if (list) {
+          const prev = state.selectedUserId;
+          list.innerHTML = filtered.map(u => `<div class="custom-option ${prev===u.id?'selected':''}" role="option" data-id="${u.id}" tabindex="-1">${u.username} (${[u.firstName, u.lastName].filter(Boolean).join(' ')})</div>`).join('');
+        }
+      };
+      if (list) {
+        renderList();
+        list.addEventListener('click', (ev) => {
+          const item = ev.target.closest('.custom-option');
+          if (!item) return;
+          const id = Number(item.dataset.id);
+          state.selectedUserId = id || null;
+          list.querySelectorAll('.custom-option').forEach(el => el.classList.toggle('selected', Number(el.dataset.id) === state.selectedUserId));
+        });
+        list.addEventListener('keydown', (ev) => {
+          const items = Array.from(list.querySelectorAll('.custom-option'));
+          if (!items.length) return;
+          const idx = Math.max(0, items.findIndex(el => el.classList.contains('selected')));
+          if (ev.key === 'ArrowDown') {
+            ev.preventDefault();
+            const next = items[Math.min(idx + 1, items.length - 1)];
+            if (next) { state.selectedUserId = Number(next.dataset.id); items.forEach(el => el.classList.toggle('selected', el === next)); next.scrollIntoView({ block: 'nearest' }); }
+          } else if (ev.key === 'ArrowUp') {
+            ev.preventDefault();
+            const prev = items[Math.max(idx - 1, 0)];
+            if (prev) { state.selectedUserId = Number(prev.dataset.id); items.forEach(el => el.classList.toggle('selected', el === prev)); prev.scrollIntoView({ block: 'nearest' }); }
+          } else if (ev.key === 'Enter') {
+            ev.preventDefault();
+            if (state.selectedUserId) { editBtn?.click(); }
+          }
+        });
+      }
+      if (search && !search.dataset.bound) {
+        search.addEventListener('input', () => { state.usersQuery = search.value || ''; renderList(); });
+        search.dataset.bound = '1';
+      }
+      if (editBtn && !editBtn.dataset.bound) {
+        editBtn.addEventListener('click', (e) => { e.preventDefault(); if (!state.selectedUserId) { showNotice(tr('Seleccione un usuario','Select a user'),'error'); return; } state.admaView = 'userEdit'; render(); });
+        editBtn.dataset.bound = '1';
+      }
+      if (addBtn && !addBtn.dataset.bound) {
+        addBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'userCreate'; render(); });
+        addBtn.dataset.bound = '1';
+      }
+      if (backBtn && !backBtn.dataset.bound) {
+        backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); });
+        backBtn.dataset.bound = '1';
+      }
+      renderIcons();
+    } else if (state.admaView === 'userEdit') {
+      loadUsers();
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const saveBtn = document.querySelector('.admin-config [data-action="save-user"]');
+      const delBtn = document.querySelector('.admin-config [data-action="delete-user"]');
+      const u = state.users.find(x => x.id === state.selectedUserId);
+      if (!u) { state.admaView = 'usersList'; render(); return; }
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+      setVal('userUsername', u.username);
+      setVal('userFirstName', u.firstName);
+      setVal('userLastName', u.lastName);
+      setVal('userEmail', u.email);
+      setVal('userPhone', u.phone || '');
+      const locSel = document.getElementById('userLocation'); if (locSel) locSel.innerHTML = LOCATIONS.map(l => `<option value="${l.id}" ${u.location===l.id?'selected':''}>${locationLabel(l.id)}</option>`).join('');
+      const deptSel = document.getElementById('userDept'); if (deptSel) deptSel.innerHTML = ORG_DEPT_NAMES.map(d => `<option value="${d.id}" ${u.orgDept===d.id?'selected':''}>${orgDeptLabel(d.id)}</option>`).join('');
+      const langSel = document.getElementById('userLanguage'); if (langSel) langSel.value = u.language || 'es';
+      const repChk = document.getElementById('userSupportRep'); if (repChk) repChk.checked = !!u.supportRep;
+      const accessSel = document.getElementById('userAccessLevel'); if (accessSel) accessSel.value = (u.accessLevel === 'admin' ? 'normal' : (u.accessLevel || 'normal'));
+      if (backBtn && !backBtn.dataset.bound) {
+        backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'usersList'; render(); });
+        backBtn.dataset.bound = '1';
+      }
+      if (saveBtn && !saveBtn.dataset.bound) {
+        saveBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const updated = {
+            firstName: (document.getElementById('userFirstName')?.value || '').trim(),
+            lastName: (document.getElementById('userLastName')?.value || '').trim(),
+            email: (document.getElementById('userEmail')?.value || '').trim(),
+            phone: (document.getElementById('userPhone')?.value || '').trim(),
+            location: (document.getElementById('userLocation')?.value || '').trim(),
+            orgDept: (document.getElementById('userDept')?.value || '').trim(),
+            language: (document.getElementById('userLanguage')?.value || '').trim(),
+            supportRep: !!document.getElementById('userSupportRep')?.checked,
+            accessLevel: (document.getElementById('userAccessLevel')?.value || '').trim(),
+          };
+          state.users = state.users.map(x => x.id === u.id ? { ...x, ...updated } : x);
+          saveUsers();
+          showNotice(tr('Usuario actualizado','User updated'),'success');
+          state.admaView = 'usersList';
+          render();
+        });
+        saveBtn.dataset.bound = '1';
+      }
+      if (delBtn && !delBtn.dataset.bound) {
+        delBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          state.users = state.users.filter(x => x.id !== u.id);
+          saveUsers();
+          showNotice(tr('Cuenta eliminada','Account deleted'),'success');
+          state.selectedUserId = null;
+          state.admaView = 'usersList';
+          render();
+        });
+        delBtn.dataset.bound = '1';
+      }
+      renderIcons();
+    } else if (state.admaView === 'userCreate') {
+      loadUsers();
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const saveBtn = document.querySelector('.admin-config [data-action="create-user"]');
+      const locSel = document.getElementById('newUserLocation'); if (locSel) locSel.innerHTML = LOCATIONS.map(l => `<option value="${l.id}">${locationLabel(l.id)}</option>`).join('');
+      const deptSel = document.getElementById('newUserDept'); if (deptSel) deptSel.innerHTML = ORG_DEPT_NAMES.map(d => `<option value="${d.id}">${orgDeptLabel(d.id)}</option>`).join('');
+      if (backBtn && !backBtn.dataset.bound) {
+        backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'usersList'; render(); });
+        backBtn.dataset.bound = '1';
+      }
+      if (saveBtn && !saveBtn.dataset.bound) {
+        saveBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const username = (document.getElementById('newUserUsername')?.value || '').trim();
+          const firstName = (document.getElementById('newUserFirstName')?.value || '').trim();
+          const lastName = (document.getElementById('newUserLastName')?.value || '').trim();
+          const email = (document.getElementById('newUserEmail')?.value || '').trim();
+          if (!username || !firstName || !lastName || !email) { showNotice(tr('Complete los campos requeridos','Fill required fields'),'error'); return; }
+          const phone = (document.getElementById('newUserPhone')?.value || '').trim();
+          const location = (document.getElementById('newUserLocation')?.value || '').trim();
+          const orgDept = (document.getElementById('newUserDept')?.value || '').trim();
+          const language = (document.getElementById('newUserLanguage')?.value || 'es').trim();
+          const supportRep = !!document.getElementById('newUserSupportRep')?.checked;
+          const accessLevel = (document.getElementById('newUserAccessLevel')?.value || 'normal').trim();
+          const nextId = (state.users.reduce((m, x) => Math.max(m, x.id), 0) + 1) || 1;
+          state.users.push({ id: nextId, username, firstName, lastName, email, phone, location, orgDept, language, supportRep, accessLevel });
+          saveUsers();
+          showNotice(tr('Usuario creado','User created'),'success');
+          state.admaView = 'usersList';
           render();
         });
         saveBtn.dataset.bound = '1';
@@ -1146,6 +1488,14 @@ const render = () => {
             return;
           } else if (act === 'change-admin-pass') {
             state.admaView = 'changePass';
+            render();
+            return;
+          } else if (act === 'manage-users') {
+            state.admaView = 'usersList';
+            render();
+            return;
+          } else if (act === 'manage-categories') {
+            state.admaView = 'categoriesList';
             render();
             return;
           }
