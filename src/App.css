@@ -1260,3 +1260,19 @@ button {
 }
 .dashboard-cta:hover { filter: brightness(0.95); }
 .dashboard-cta:focus-visible { outline: 3px solid #93c5fd; outline-offset: 3px; }
+.alert-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.18); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+.alert-overlay.show { opacity: 1; pointer-events: auto; }
+.alert-dialog { background: var(--surface); border: 1px solid var(--color-border); border-radius: 16px; padding: 20px 24px; box-shadow: 0 10px 30px rgba(0,0,0,.12); display: flex; flex-direction: column; align-items: center; gap: 14px; min-width: 280px; }
+.alert-title { font-weight: 700; color: var(--color-text); text-align: center; }
+.success-anim { width: 84px; height: 84px; display: block; }
+.success-anim .ring { fill: none; stroke: var(--color-success); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 289; stroke-dashoffset: 289; animation: ringDraw .9s ease-out forwards; }
+.success-anim .fill { fill: var(--color-success); opacity: 0; animation: fillIn .4s ease-out .8s forwards; }
+.success-anim .check { fill: none; stroke: var(--color-white); stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 120; stroke-dashoffset: 120; animation: checkDraw .5s ease-out 1.0s forwards; }
+.error-anim { width: 84px; height: 84px; display: block; }
+.error-anim .ring { fill: none; stroke: var(--color-expiring); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 289; stroke-dashoffset: 289; animation: ringDraw .9s ease-out forwards; }
+.error-anim .fill { fill: var(--color-expiring); opacity: 0; animation: fillIn .4s ease-out .8s forwards; }
+.error-anim .cross { fill: none; stroke: var(--color-white); stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 180; stroke-dashoffset: 180; animation: crossDraw .6s ease-out 1.0s forwards; }
+@keyframes ringDraw { to { stroke-dashoffset: 0; } }
+@keyframes fillIn { to { opacity: 1; } }
+@keyframes checkDraw { to { stroke-dashoffset: 0; } }
+@keyframes crossDraw { to { stroke-dashoffset: 0; } }

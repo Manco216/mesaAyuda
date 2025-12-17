@@ -185,6 +185,77 @@ const renderIcons = () => {
   }
 };
 
+const showSuccessAlert = (message) => {
+  const id = 'successAlertOverlay';
+  let overlay = document.getElementById(id);
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = id;
+    overlay.className = 'alert-overlay';
+    overlay.innerHTML = '<div class="alert-dialog"><svg class="success-anim" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring" cx="60" cy="60" r="46"></circle><circle class="fill" cx="60" cy="60" r="46"></circle><path class="check" d="M38 62 L52 76 L82 46"></path></svg><div class="alert-title"></div></div>';
+    document.body.appendChild(overlay);
+  }
+  // Reiniciar animación siempre: reemplazar el SVG para reiniciar los keyframes
+  const dialog = overlay.querySelector('.alert-dialog');
+  if (dialog) {
+    let svg = dialog.querySelector('.success-anim');
+    if (svg) { try { svg.remove(); } catch(_) {} }
+    const fresh = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    fresh.setAttribute('class', 'success-anim');
+    fresh.setAttribute('viewBox', '0 0 120 120');
+    fresh.setAttribute('aria-hidden', 'true');
+    const mk = (tag, attrs) => { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attrs||{}).forEach(([k,v]) => el.setAttribute(k,v)); return el; };
+    fresh.appendChild(mk('circle', { class: 'ring', cx: '60', cy: '60', r: '46' }));
+    fresh.appendChild(mk('circle', { class: 'fill', cx: '60', cy: '60', r: '46' }));
+    fresh.appendChild(mk('path', { class: 'check', d: 'M38 62 L52 76 L82 46' }));
+    const titleEl = dialog.querySelector('.alert-title');
+    dialog.insertBefore(fresh, titleEl || null);
+  }
+  const title = overlay.querySelector('.alert-title');
+  if (title) title.textContent = String(message||'');
+  // Cancelar temporizador anterior si existe
+  if (overlay.__hideTimer) { try { clearTimeout(overlay.__hideTimer); } catch(_) {} }
+  overlay.classList.remove('show');
+  // Forzar reflow antes de mostrar para asegurar CSS aplica desde estado inicial
+  void overlay.offsetWidth;
+  overlay.classList.add('show');
+  overlay.__hideTimer = setTimeout(() => { overlay.classList.remove('show'); overlay.__hideTimer = null; }, 2200);
+};
+
+const showErrorAlert = (message) => {
+  const id = 'errorAlertOverlay';
+  let overlay = document.getElementById(id);
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = id;
+    overlay.className = 'alert-overlay';
+    overlay.innerHTML = '<div class="alert-dialog"><svg class="error-anim" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring" cx="60" cy="60" r="46"></circle><circle class="fill" cx="60" cy="60" r="46"></circle><path class="cross" d="M40 40 L80 80 M80 40 L40 80"></path></svg><div class="alert-title"></div></div>';
+    document.body.appendChild(overlay);
+  }
+  const dialog = overlay.querySelector('.alert-dialog');
+  if (dialog) {
+    let svg = dialog.querySelector('.error-anim');
+    if (svg) { try { svg.remove(); } catch(_) {} }
+    const fresh = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    fresh.setAttribute('class', 'error-anim');
+    fresh.setAttribute('viewBox', '0 0 120 120');
+    fresh.setAttribute('aria-hidden', 'true');
+    const mk = (tag, attrs) => { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attrs||{}).forEach(([k,v]) => el.setAttribute(k,v)); return el; };
+    fresh.appendChild(mk('circle', { class: 'ring', cx: '60', cy: '60', r: '46' }));
+    fresh.appendChild(mk('circle', { class: 'fill', cx: '60', cy: '60', r: '46' }));
+    fresh.appendChild(mk('path', { class: 'cross', d: 'M40 40 L80 80 M80 40 L40 80' }));
+    const titleEl = dialog.querySelector('.alert-title');
+    dialog.insertBefore(fresh, titleEl || null);
+  }
+  const title = overlay.querySelector('.alert-title');
+  if (title) title.textContent = String(message||'');
+  if (overlay.__hideTimer) { try { clearTimeout(overlay.__hideTimer); } catch(_) {} }
+  overlay.classList.remove('show');
+  void overlay.offsetWidth;
+  overlay.classList.add('show');
+  overlay.__hideTimer = setTimeout(() => { overlay.classList.remove('show'); overlay.__hideTimer = null; }, 2400);
+};
+
 // Obtiene el HTML de una plantilla definida en index.html
 const getTemplateHTML = (id) => {
   const tpl = document.getElementById(id);
@@ -505,7 +576,7 @@ const initEditView = () => {
       const f = file.files && file.files[0];
       if (!f) return;
       const maxSize = 4 * 1024 * 1024;
-      if (f.size > maxSize) { alert(state.preferences.language==='en' ? 'Image too large (max 4MB).' : 'Imagen muy pesada (máximo 4MB).'); return; }
+      if (f.size > maxSize) { showErrorAlert(state.preferences.language==='en' ? 'Image too large (max 4MB).' : 'Imagen muy pesada (máximo 4MB).'); return; }
       const reader = new FileReader();
       reader.onload = (ev) => {
         const dataUrl = ev.target?.result;
@@ -962,6 +1033,209 @@ const render = () => {
         const passTpl = getTemplateHTML('adma-change-pass-template');
         if (passTpl) return passTpl;
         return `<section class="admin-config"><h2>Cambiar la contraseña del administrador</h2></section>`;
+      } else if (state.admaView === 'mail' || state.admaView === 'mailEdit') {
+        const mailDefaults = {
+          user_new: { subject: 'Nueva solicitud de servicio #[problemid]', body: 'Su solicitud fue registrada correctamente.\n\nPuede ingresar a su solicitud con el siguiente enlace: [url]\n\nDETALLES\nID: [problemid]\nUsuario: [uid]' },
+          user_update: { subject: 'Solicitud de servicio: #[problemid] Actualizada', body: 'Su solicitud de servicio fue actualizada, agradecemos revisar la actualización de las notas.\n\nPuede ingresar a su solicitud de servicio con el siguiente enlace: [url]\n\nDETALLES DE LA SOLICITUD\n--------------\nID: [problemid]\nUsuario: [uid]' },
+          user_close: { subject: 'Solicitud #[problemid] cerrada', body: 'Su solicitud ha sido cerrada.\n\nPuede revisar los detalles y dejar comentarios en: [url]' },
+          rep_new: { subject: 'Nuevo ticket asignado #[problemid]', body: 'Se le ha asignado un nuevo ticket.\n\nVer detalles: [url]\nUsuario: [uid]' },
+          rep_update: { subject: 'Ticket #[problemid] actualizado', body: 'El ticket ha sido actualizado.\n\nVer detalles: [url]' },
+          rep_close: { subject: 'Ticket #[problemid] cerrado', body: 'El ticket ha sido cerrado.\n\nVer detalles: [url]' },
+          rep_pager: { subject: 'Aviso de pager #[problemid]', body: 'Alerta de pager generada para el ticket.\n\nVer detalles: [url]' }
+        };
+        const MAIL_KEY = 'socya:mailTemplates';
+        const loadMail = () => { try { const raw = localStorage.getItem(MAIL_KEY); if (raw) return { ...mailDefaults, ...(JSON.parse(raw)||{}) }; } catch(_) {} return { ...mailDefaults }; };
+        const mails = loadMail();
+        const key = state.mailKey || 'user_update';
+        const opts = [
+          ['user_new','User - New'],
+          ['user_update','User - Update'],
+          ['user_close','User - Close'],
+          ['rep_new','Rep - New'],
+          ['rep_update','Rep - Update'],
+          ['rep_close','Rep - Close'],
+          ['rep_pager','Rep - Pager']
+        ];
+        if (state.admaView === 'mail') {
+          return `
+          <section class="admin-config" aria-label="Mensajes de correo">
+            <header class="admin-config-header">
+              <h2>${tr('Mensajes de correo','E-mail Messages')}</h2>
+              <div class="admin-config-actions">
+                <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+              </div>
+            </header>
+            <form id="mailSelectForm" class="admin-form" novalidate>
+              <div class="form-field">
+                <label for="mailMessageSel"><strong>${tr('Mensaje:','Message:')}</strong></label>
+                <select id="mailMessageSel">${opts.map(([v,l]) => `<option value="${v}" ${v===key?'selected':''}>${l}</option>`).join('')}</select>
+              </div>
+              <div style="padding-top:10px">
+                <button type="button" id="mailEditBtn" class="admin-config-btn primary"><span data-lucide="square-pen"></span><span>${tr('Editar mensaje','Edit Message')}</span></button>
+              </div>
+            </form>
+          </section>`;
+        } else {
+          const cur = mails[key] || { subject:'', body:'' };
+          return `
+          <section class="admin-config" aria-label="Editar mensaje de correo">
+            <header class="admin-config-header">
+              <h2>${tr('Mensajes de correo','E-mail Messages')}</h2>
+              <div class="admin-config-actions">
+                <button type="button" class="admin-config-btn" data-action="back-to-mail"><span data-lucide="arrow-left"></span><span>${tr('Elegir otro mensaje','Choose another message')}</span></button>
+              </div>
+            </header>
+            <form id="mailEditForm" class="admin-form" novalidate>
+              <div class="form-field">
+                <label for="mailSubject">${tr('Asunto:','Subject:')}</label>
+                <input id="mailSubject" type="text" value="${cur.subject.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" />
+              </div>
+              <div class="form-field">
+                <label for="mailBody">${tr('Cuerpo:','Body:')}</label>
+                <textarea id="mailBody" rows="10" style="min-height:180px">${cur.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+              </div>
+              <div style="padding:6px 0">
+                <button type="button" id="mailSyntaxHelp" class="admin-config-btn"><span data-lucide="help-circle"></span><span>${tr('Ayuda de sintaxis','Syntax Help')}</span></button>
+              </div>
+              <div style="padding-top:6px">
+                <button type="button" id="mailSaveBtn" class="admin-config-btn primary"><span data-lucide="save"></span><span>${tr('Guardar','Save')}</span></button>
+              </div>
+              <div style="padding-top:14px">
+                <button type="button" id="mailGoAdmin" class="admin-config-btn"><span data-lucide="home"></span><span>${tr('Menú administrativo','Administrative Menu')}</span></button>
+              </div>
+            </form>
+          </section>`;
+        }
+      } else if (state.admaView === 'users' || state.admaView === 'userEdit' || state.admaView === 'userAdd') {
+        const USERS_KEY = 'socya:users';
+        const defaults = [
+          { id: 1, username: 'aaguirre', firstName: 'Alejandro', lastName: 'Aguirre Gutiérrez', email: 'aaguirre@socya.org.co', pager: '', phone: '3184695944', location: 'Pereira', department: 'DIRECCION DE PROYECTOS SOCIOAMBIENTALES', language: 'es', isSupport: false, access: 'normal', password: '' },
+          { id: 2, username: 'aarango', firstName: 'Alexander', lastName: 'Arango Sánchez', email: 'aarango@socya.org.co', pager: '', phone: '', location: '', department: 'DIRECCION DE PROYECTOS SOCIOAMBIENTALES', language: 'es', isSupport: false, access: 'normal', password: '' },
+          { id: 3, username: 'aarboleda', firstName: 'Angie Paola', lastName: 'Arboleda Marquez', email: 'aarboleda@socya.org.co', pager: '', phone: '', location: '', department: 'DIRECCION DE PROYECTOS SOCIOAMBIENTALES', language: 'es', isSupport: false, access: 'normal', password: '' }
+        ];
+        const loadUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw) return (JSON.parse(raw)||defaults); } catch(_) {} return defaults; };
+        const esc = (s) => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const users = loadUsers();
+        const departments = [ 'DIRECCION DE PROYECTOS SOCIOAMBIENTALES', 'DIRECCION ADMINISTRATIVA Y FINANCIERA', 'TECNOLOGÍAS DE INFORMACIÓN', 'Not Specified' ];
+        const langs = [ ['es', tr('Español (Spanish)','Spanish (Español)')], ['en', tr('Inglés (English)','English (English)')] ];
+        const accessLevels = [ ['normal', tr('Normal','Normal')], ['admin', tr('Administrador','Admin')] ];
+        const selId = state.selectedUserId || users[0]?.id || 0;
+        if (state.admaView === 'users') {
+          return `
+          <section class="admin-config" aria-label="Administrar usuarios">
+            <header class="admin-config-header"><h2>${tr('Administrar Usuarios','Manage Users')}</h2><div class="admin-config-actions"><button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>${tr('Volver','Back')}</span></button></div></header>
+            <form class="admin-form" id="manageUsersForm">
+              <div class="form-field">
+                <select id="userList" size="12">${users.map(u => `<option value="${u.id}" ${u.id===selId?'selected':''}>${esc(u.username)} (${esc(u.firstName)} ${esc(u.lastName)})</option>`).join('')}</select>
+              </div>
+              <div style="padding-top:10px"><button type="button" id="editUserBtn" class="admin-config-btn primary"><span data-lucide="square-pen"></span><span>${tr('Editar usuario','Edit User Account')}</span></button></div>
+              <div style="padding-top:10px"><button type="button" id="addUserLink" class="admin-config-btn primary"><span data-lucide="user-plus"></span><span>${tr('Agregar usuarios','Add New Users')}</span></button></div>
+            </form>
+          </section>`;
+        }
+        if (state.admaView === 'userEdit') {
+          const u = users.find(x => x.id === selId) || users[0] || { id: 0, username:'', firstName:'', lastName:'', email:'', pager:'', phone:'', location:'', department:'Not Specified', language:'es', isSupport:false, access:'normal', password:'' };
+          return `
+          <section class="admin-config" aria-label="Actualizar usuario">
+            <header class="admin-config-header"><h2>${tr('Actualizar Información','Update Information')}</h2><div class="admin-config-actions"><button type="button" class="admin-config-btn" data-action="back-users"><span data-lucide="arrow-left"></span><span>${tr('Volver','Back')}</span></button></div></header>
+            <form id="userEditForm" class="admin-form" novalidate>
+              <div class="form-field"><label for="uUser">${tr('Usuario','User Name')}:</label><input id="uUser" type="text" value="${esc(u.username)}" disabled /></div>
+              <div class="form-field"><label for="uFirst">${tr('Nombre','First Name')}:</label><input id="uFirst" type="text" required value="${esc(u.firstName)}" /></div>
+              <div class="form-field"><label for="uLast">${tr('Apellido','Last Name')}:</label><input id="uLast" type="text" required value="${esc(u.lastName)}" /></div>
+              <div class="form-field"><label for="uEmail">${tr('Correo electrónico','E-Mail Address')}:</label><input id="uEmail" type="email" required value="${esc(u.email)}" /></div>
+              <div class="form-field"><label for="uPager">${tr('Dirección de pager','Pager Address')}:</label><input id="uPager" type="text" value="${esc(u.pager)}" /></div>
+              <div class="form-field"><label for="uPhone">${tr('Teléfono','Phone Number')}:</label><input id="uPhone" type="text" value="${esc(u.phone)}" /></div>
+              <div class="form-field"><label for="uLoc">${tr('Ubicación','Location')}:</label><input id="uLoc" type="text" value="${esc(u.location)}" /></div>
+              <div class="form-field"><label for="uDept">${tr('Departamento','Department')}:</label><select id="uDept">${departments.map(d => `<option value="${esc(d)}" ${u.department===d?'selected':''}>${esc(d)}</option>`).join('')}</select></div>
+              <div class="form-field"><label for="uLang">${tr('Idioma','Language')}:</label><select id="uLang">${langs.map(([v,l]) => `<option value="${v}" ${u.language===v?'selected':''}>${l}</option>`).join('')}</select></div>
+              <div class="form-field"><label>${tr('Agente de soporte','Support Rep')}:</label><div><input id="uSupport" type="checkbox" ${u.isSupport?'checked':''} /> <label for="uSupport">${tr('Habilitar','Enable')}</label></div></div>
+              <div class="form-field"><label for="uAccess">${tr('Nivel de acceso','Access Level')}:</label><select id="uAccess">${accessLevels.map(([v,l]) => `<option value="${v}" ${u.access===v?'selected':''}>${l}</option>`).join('')}</select></div>
+              <div class="form-field"><label for="uPass">${tr('Nueva contraseña','New Password')}:</label><input id="uPass" type="password" /></div>
+              <div style="padding-top:8px"><button type="button" id="userSaveBtn" class="admin-config-btn primary"><span data-lucide="save"></span><span>${tr('Guardar','Save')}</span></button></div>
+              <div style="padding-top:8px; display:flex; gap:8px"><button type="button" id="userChooseLink" class="admin-config-btn"><span data-lucide="arrow-left"></span><span>${tr('Elegir otro usuario','Choose another user')}</span></button></div>
+              <div style="padding-top:12px"><button type="button" id="userDeleteBtn" class="admin-config-btn"><span data-lucide="trash-2"></span><span>${tr('Eliminar cuenta','Delete Account')}</span></button></div>
+            </form>
+          </section>`;
+        }
+        if (state.admaView === 'userAdd') {
+          return `
+          <section class="admin-config" aria-label="Agregar usuario">
+            <header class="admin-config-header"><h2>${tr('Agregar usuarios','Add New Users')}</h2><div class="admin-config-actions"><button type="button" class="admin-config-btn" data-action="back-users"><span data-lucide="arrow-left"></span><span>${tr('Volver','Back')}</span></button></div></header>
+            <form id="userAddForm" class="admin-form" novalidate>
+              <div class="form-field"><label for="nUser">${tr('Usuario','User Name')}:</label><input id="nUser" type="text" required /></div>
+              <div class="form-field"><label for="nFirst">${tr('Nombre','First Name')}:</label><input id="nFirst" type="text" required /></div>
+              <div class="form-field"><label for="nLast">${tr('Apellido','Last Name')}:</label><input id="nLast" type="text" required /></div>
+              <div class="form-field"><label for="nEmail">${tr('Correo electrónico','E-Mail Address')}:</label><input id="nEmail" type="email" required /></div>
+              <div class="form-field"><label for="nPager">${tr('Dirección de pager','Pager Address')}:</label><input id="nPager" type="text" /></div>
+              <div class="form-field"><label for="nPhone">${tr('Teléfono','Phone Number')}:</label><input id="nPhone" type="text" /></div>
+              <div class="form-field"><label for="nLoc">${tr('Ubicación','Location')}:</label><input id="nLoc" type="text" /></div>
+              <div class="form-field"><label for="nDept">${tr('Departamento','Department')}:</label><select id="nDept">${departments.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}</select></div>
+              <div class="form-field"><label for="nLang">${tr('Idioma','Language')}:</label><select id="nLang">${langs.map(([v,l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>
+              <div class="form-field"><label>${tr('Agente de soporte','Support Rep')}:</label><div><input id="nSupport" type="checkbox" /> <label for="nSupport">${tr('Habilitar','Enable')}</label></div></div>
+              <div class="form-field"><label for="nAccess">${tr('Nivel de acceso','Access Level')}:</label><select id="nAccess">${accessLevels.map(([v,l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>
+              <div class="form-field"><label for="nPass">${tr('Nueva contraseña','New Password')}:</label><input id="nPass" type="password" required /></div>
+              <div style="padding-top:8px"><button type="button" id="userCreateBtn" class="admin-config-btn primary"><span data-lucide="save"></span><span>${tr('Guardar','Save')}</span></button></div>
+              
+            </form>
+          </section>`;
+        }
+      } else if (state.admaView === 'categories' || state.admaView === 'categoryEdit' || state.admaView === 'categoryAdd') {
+        const CATEGORIES_KEY = 'socya:categories';
+        const USERS_KEY = 'socya:users';
+        const userDefaults = [
+          { id: 1, username: 'aaguirre', firstName: 'Alejandro', lastName: 'Aguirre Gutiérrez', email: 'aaguirre@socya.org.co', pager: '', phone: '3184695944', location: 'Pereira', department: 'DIRECCION DE PROYECTOS SOCIOAMBIENTALES', language: 'es', isSupport: false, access: 'normal', password: '' },
+          { id: 2, username: 'aarango', firstName: 'Alexander', lastName: 'Arango Sánchez', email: 'aarango@socya.org.co', pager: '', phone: '', location: '', department: 'DIRECCION DE PROYECTOS SOCIOAMBIENTALES', language: 'es', isSupport: false, access: 'normal', password: '' },
+          { id: 3, username: 'aarboleda', firstName: 'Angie Paola', lastName: 'Arboleda Marquez', email: 'aarboleda@socya.org.co', pager: '', phone: '', location: '', department: 'DIRECCION DE PROYECTOS SOCIOAMBIENTALES', language: 'es', isSupport: false, access: 'normal', password: '' }
+        ];
+        const loadUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw) return (JSON.parse(raw)||userDefaults); } catch(_) {} return userDefaults; };
+        const users = loadUsers();
+        const reps = users.map(u => u.username);
+        const catDefaults = [
+          { id: 1, name: 'A: Creacion de centros de costos GP', rep: reps[0] || 'aaguirre' },
+          { id: 2, name: 'A: Permisos en plataforma de clientes', rep: reps[2] || reps[0] || 'aarboleda' }
+        ];
+        const loadCats = () => { try { const raw = localStorage.getItem(CATEGORIES_KEY); if (raw) return (JSON.parse(raw)||catDefaults); } catch(_) {} return catDefaults; };
+        const esc = (s) => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const cats = loadCats();
+        if (state.admaView === 'categories') {
+          return `
+          <section class="admin-config" aria-label="Administrar categorías">
+            <header class="admin-config-header"><h2>${tr('Administrar Categorías','Manage Categories')}</h2><div class="admin-config-actions"><button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>${tr('Volver','Back')}</span></button></div></header>
+            <form class="admin-form" id="manageCategoriesForm">
+              <div class="form-field">
+                <table class="admin-table" id="categoriesTable" aria-label="${tr('Categorías','Categories')}">
+                  <thead><tr><th>${tr('Categoría','Category')}</th><th>${tr('Rep','Rep')}</th><th>${tr('Modificar','Modify')}</th></tr></thead>
+                  <tbody>
+                    ${cats.map(c => `
+                      <tr data-id="${c.id}">
+                        <td>${esc(c.name)}</td>
+                        <td>${esc(c.rep)}</td>
+                        <td>
+                          <button type="button" class="admin-config-btn" data-action="edit-cat" data-id="${c.id}"><span data-lucide="square-pen"></span><span>${tr('Editar','Edit')}</span></button>
+                          <button type="button" class="admin-config-btn" data-action="delete-cat" data-id="${c.id}"><span data-lucide="trash-2"></span><span>${tr('Eliminar','Delete')}</span></button>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+              <div style="padding-top:10px"><button type="button" id="addCategoryBtn" class="admin-config-btn primary"><span data-lucide="plus"></span><span>${tr('Agregar nueva categoría','Add New Category')}</span></button></div>
+            </form>
+          </section>`;
+        } else {
+          const id = state.selectedCategoryId || 0;
+          const cur = cats.find(x => x.id === id) || { id: 0, name: '', rep: reps[0] || '' };
+          const title = id ? tr('Crear/Modificar Categoría','Create/Modify Category') : tr('Agregar categoría','Add Category');
+          return `
+          <section class="admin-config" aria-label="Editar categoría">
+            <header class="admin-config-header"><h2>${title}</h2><div class="admin-config-actions"><button type="button" class="admin-config-btn" data-action="back-categories"><span data-lucide="arrow-left"></span><span>${tr('Volver','Back')}</span></button></div></header>
+            <form id="categoryEditForm" class="admin-form" novalidate>
+              <div class="form-field"><label for="catName">${tr('Nombre de la categoría','Category Name')}:</label><input id="catName" type="text" required value="${esc(cur.name)}" /></div>
+              <div class="form-field"><label for="catRep">${tr('Representante principal','Primary Rep')}:</label><select id="catRep">${reps.map(r => `<option value="${esc(r)}" ${cur.rep===r?'selected':''}>${esc(r)}</option>`).join('')}</select></div>
+              <div style="padding-top:8px"><button type="button" id="catSaveBtn" class="admin-config-btn primary"><span data-lucide="save"></span><span>${tr('Guardar','Save')}</span></button></div>
+            </form>
+          </section>`;
+        }
       } else {
         const tpl = getTemplateHTML('adma-template');
         if (tpl) return tpl;
@@ -1095,7 +1369,7 @@ const render = () => {
             maxImageSize: val('cfgMaxImage'),
           };
           try { localStorage.setItem('socya:siteConfig', JSON.stringify(state.siteConfig)); } catch(_) {}
-          alert(tr('Configuración guardada','Settings saved'));
+          showSuccessAlert(tr('Configuración guardada','Settings saved'));
         });
         saveBtn.dataset.bound = '1';
       }
@@ -1114,16 +1388,137 @@ const render = () => {
           const next = (document.getElementById('adminPassNew')?.value || '').trim();
           const conf = (document.getElementById('adminPassConfirm')?.value || '').trim();
           const expected = loadAdminPass();
-          if (cur !== expected) { alert(tr('Contraseña actual incorrecta','Current password incorrect')); return; }
-          if (!next || next.length < 4) { alert(tr('La nueva contraseña es muy corta','New password too short')); return; }
-          if (next !== conf) { alert(tr('Las contraseñas no coinciden','Passwords do not match')); return; }
+          if (cur !== expected) { showErrorAlert(tr('Contraseña actual incorrecta','Current password incorrect')); return; }
+          if (!next || next.length < 4) { showErrorAlert(tr('La nueva contraseña es muy corta','New password too short')); return; }
+          if (next !== conf) { showErrorAlert(tr('Las contraseñas no coinciden','Passwords do not match')); return; }
           saveAdminPass(next);
-          alert(tr('Contraseña actualizada','Password updated'));
+          showSuccessAlert(tr('Contraseña actualizada','Password updated'));
           state.admaView = null;
           render();
         });
         saveBtn.dataset.bound = '1';
       }
+      renderIcons();
+    } else if (state.admaView === 'mail') {
+      const sel = document.getElementById('mailMessageSel');
+      const edit = document.getElementById('mailEditBtn');
+      const back = document.querySelector('.admin-config [data-action="back"]');
+      if (back && !back.dataset.bound) { back.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); }); back.dataset.bound = '1'; }
+      if (sel && !sel.dataset.bound) { sel.addEventListener('change', () => { state.mailKey = sel.value; }); sel.dataset.bound = '1'; }
+      if (edit && !edit.dataset.bound) { edit.addEventListener('click', () => { state.mailKey = (sel?.value)||state.mailKey||'user_update'; state.admaView = 'mailEdit'; render(); }); edit.dataset.bound = '1'; }
+      renderIcons();
+    } else if (state.admaView === 'mailEdit') {
+      const MAIL_KEY = 'socya:mailTemplates';
+      const saveMail = (obj) => { try { localStorage.setItem(MAIL_KEY, JSON.stringify(obj||{})); showSuccessAlert(tr('Configuración guardada','Settings saved')); } catch(_) {} };
+      const subj = document.getElementById('mailSubject');
+      const body = document.getElementById('mailBody');
+      const save = document.getElementById('mailSaveBtn');
+      const help = document.getElementById('mailSyntaxHelp');
+      const backToMail = document.querySelector('.admin-config [data-action="back-to-mail"]');
+      const admin = document.getElementById('mailGoAdmin');
+      const defaults = {
+        user_new: { subject: 'Nueva solicitud de servicio #[problemid]', body: 'Su solicitud fue registrada correctamente.\n\nPuede ingresar a su solicitud con el siguiente enlace: [url]\n\nDETALLES\nID: [problemid]\nUsuario: [uid]' },
+        user_update: { subject: 'Solicitud de servicio: #[problemid] Actualizada', body: 'Su solicitud de servicio fue actualizada, agradecemos revisar la actualización de las notas.\n\nPuede ingresar a su solicitud de servicio con el siguiente enlace: [url]\n\nDETALLES DE LA SOLICITUD\n--------------\nID: [problemid]\nUsuario: [uid]' },
+        user_close: { subject: 'Solicitud #[problemid] cerrada', body: 'Su solicitud ha sido cerrada.\n\nPuede revisar los detalles y dejar comentarios en: [url]' },
+        rep_new: { subject: 'Nuevo ticket asignado #[problemid]', body: 'Se le ha asignado un nuevo ticket.\n\nVer detalles: [url]\nUsuario: [uid]' },
+        rep_update: { subject: 'Ticket #[problemid] actualizado', body: 'El ticket ha sido actualizado.\n\nVer detalles: [url]' },
+        rep_close: { subject: 'Ticket #[problemid] cerrado', body: 'El ticket ha sido cerrado.\n\nVer detalles: [url]' },
+        rep_pager: { subject: 'Aviso de pager #[problemid]', body: 'Alerta de pager generada para el ticket.\n\nVer detalles: [url]' }
+      };
+      const loadMail = () => { try { const raw = localStorage.getItem(MAIL_KEY); if (raw) return { ...defaults, ...(JSON.parse(raw)||{}) }; } catch(_) {} return { ...defaults }; };
+      const mails = loadMail();
+      const key = state.mailKey || 'user_update';
+      if (help && !help.dataset.bound) { help.addEventListener('click', (e) => { e.preventDefault(); alert('Placeholders soportados:\n[problemid] ID del ticket\n[uid] Usuario\n[url] Enlace al ticket'); }); help.dataset.bound = '1'; }
+      if (save && !save.dataset.bound) { save.addEventListener('click', (e) => { e.preventDefault(); const next = { ...mails, [key]: { subject: String(subj?.value||''), body: String(body?.value||'') } }; saveMail(next); }); save.dataset.bound = '1'; }
+      if (backToMail && !backToMail.dataset.bound) { backToMail.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'mail'; render(); }); backToMail.dataset.bound = '1'; }
+      if (admin && !admin.dataset.bound) { admin.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); }); admin.dataset.bound = '1'; }
+      renderIcons();
+    } else if (state.admaView === 'users') {
+      const USERS_KEY = 'socya:users';
+      const loadUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw) return (JSON.parse(raw)||[]); } catch(_) {} return []; };
+      const users = loadUsers();
+      const back = document.querySelector('.admin-config [data-action="back"]');
+      const list = document.getElementById('userList');
+      const edit = document.getElementById('editUserBtn');
+      const add = document.getElementById('addUserLink');
+      if (back && !back.dataset.bound) { back.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); }); back.dataset.bound = '1'; }
+      if (list && !list.dataset.bound) { list.addEventListener('change', () => { state.selectedUserId = Number(list.value); }); list.dataset.bound = '1'; }
+      if (edit && !edit.dataset.bound) { edit.addEventListener('click', () => { state.selectedUserId = Number((list?.value)||state.selectedUserId||users[0]?.id||0); state.admaView = 'userEdit'; render(); }); edit.dataset.bound = '1'; }
+      if (add && !add.dataset.bound) { add.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'userAdd'; render(); }); add.dataset.bound = '1'; }
+      renderIcons();
+    } else if (state.admaView === 'userEdit') {
+      const USERS_KEY = 'socya:users';
+      const loadUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw) return (JSON.parse(raw)||[]); } catch(_) {} return []; };
+      const saveUsers = (arr) => { try { localStorage.setItem(USERS_KEY, JSON.stringify(arr||[])); } catch(_) {} };
+      const users = loadUsers();
+      const id = state.selectedUserId || users[0]?.id || 0;
+      const back = document.querySelector('.admin-config [data-action="back-users"]');
+      const first = document.getElementById('uFirst');
+      const last = document.getElementById('uLast');
+      const email = document.getElementById('uEmail');
+      const pager = document.getElementById('uPager');
+      const phone = document.getElementById('uPhone');
+      const loc = document.getElementById('uLoc');
+      const dept = document.getElementById('uDept');
+      const lang = document.getElementById('uLang');
+      const support = document.getElementById('uSupport');
+      const access = document.getElementById('uAccess');
+      const pass = document.getElementById('uPass');
+      const save = document.getElementById('userSaveBtn');
+      const del = document.getElementById('userDeleteBtn');
+      const choose = document.getElementById('userChooseLink');
+      
+      if (back && !back.dataset.bound) { back.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'users'; render(); }); back.dataset.bound = '1'; }
+      if (save && !save.dataset.bound) { save.addEventListener('click', () => { const arr = users.map(u => (u.id===id ? { ...u, firstName: String(first?.value||''), lastName: String(last?.value||''), email: String(email?.value||''), pager: String(pager?.value||''), phone: String(phone?.value||''), location: String(loc?.value||''), department: String(dept?.value||''), language: String(lang?.value||'es'), isSupport: !!(support&&support.checked), access: String(access?.value||'normal'), password: String(pass?.value||'') || u.password } : u)); saveUsers(arr); showSuccessAlert(tr('Usuario actualizado','User updated')); }); save.dataset.bound = '1'; }
+      if (del && !del.dataset.bound) { del.addEventListener('click', () => { const arr = users.filter(u => u.id !== id); saveUsers(arr); showSuccessAlert(tr('Cuenta eliminada','Account deleted')); state.admaView = 'users'; render(); }); del.dataset.bound = '1'; }
+      if (choose && !choose.dataset.bound) { choose.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'users'; render(); }); choose.dataset.bound = '1'; }
+      renderIcons();
+    } else if (state.admaView === 'userAdd') {
+      const USERS_KEY = 'socya:users';
+      const loadUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw) return (JSON.parse(raw)||[]); } catch(_) {} return []; };
+      const saveUsers = (arr) => { try { localStorage.setItem(USERS_KEY, JSON.stringify(arr||[])); } catch(_) {} };
+      const users = loadUsers();
+      const back = document.querySelector('.admin-config [data-action="back-users"]');
+      const user = document.getElementById('nUser');
+      const first = document.getElementById('nFirst');
+      const last = document.getElementById('nLast');
+      const email = document.getElementById('nEmail');
+      const pager = document.getElementById('nPager');
+      const phone = document.getElementById('nPhone');
+      const loc = document.getElementById('nLoc');
+      const dept = document.getElementById('nDept');
+      const lang = document.getElementById('nLang');
+      const support = document.getElementById('nSupport');
+      const access = document.getElementById('nAccess');
+      const pass = document.getElementById('nPass');
+      const create = document.getElementById('userCreateBtn');
+      
+      if (back && !back.dataset.bound) { back.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'users'; render(); }); back.dataset.bound = '1'; }
+      if (create && !create.dataset.bound) { create.addEventListener('click', () => { const nextId = (users.reduce((max,u)=>Math.max(max,u.id),0) + 1) || 1; const u = { id: nextId, username: String(user?.value||'').trim(), firstName: String(first?.value||''), lastName: String(last?.value||''), email: String(email?.value||''), pager: String(pager?.value||''), phone: String(phone?.value||''), location: String(loc?.value||''), department: String(dept?.value||''), language: String(lang?.value||'es'), isSupport: !!(support&&support.checked), access: String(access?.value||'normal'), password: String(pass?.value||'') }; const arr = [...users, u]; saveUsers(arr); showSuccessAlert(tr('Usuario creado','User created')); state.selectedUserId = u.id; state.admaView = 'users'; render(); }); create.dataset.bound = '1'; }
+      renderIcons();
+    } else if (state.admaView === 'categories') {
+      const back = document.querySelector('.admin-config [data-action="back"]');
+      const add = document.getElementById('addCategoryBtn');
+      const edits = Array.from(document.querySelectorAll('.admin-config [data-action="edit-cat"]'));
+      const deletes = Array.from(document.querySelectorAll('.admin-config [data-action="delete-cat"]'));
+      const CATEGORIES_KEY = 'socya:categories';
+      const loadCats = () => { try { const raw = localStorage.getItem(CATEGORIES_KEY); if (raw) return (JSON.parse(raw)||[]); } catch(_) {} return []; };
+      const saveCats = (arr) => { try { localStorage.setItem(CATEGORIES_KEY, JSON.stringify(arr||[])); } catch(_) {} };
+      const cats = loadCats();
+      if (back && !back.dataset.bound) { back.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); }); back.dataset.bound = '1'; }
+      if (add && !add.dataset.bound) { add.addEventListener('click', (e) => { e.preventDefault(); state.selectedCategoryId = 0; state.admaView = 'categoryAdd'; render(); }); add.dataset.bound = '1'; }
+      edits.forEach(btn => { if (!btn.dataset.bound) { btn.addEventListener('click', (e) => { e.preventDefault(); const id = Number(btn.dataset.id||0); state.selectedCategoryId = id; state.admaView = 'categoryEdit'; render(); }); btn.dataset.bound = '1'; } });
+      deletes.forEach(btn => { if (!btn.dataset.bound) { btn.addEventListener('click', (e) => { e.preventDefault(); const id = Number(btn.dataset.id||0); const arr = cats.filter(c => c.id !== id); saveCats(arr); showSuccessAlert(tr('Categoría eliminada','Category deleted')); render(); }); btn.dataset.bound = '1'; } });
+      renderIcons();
+    } else if (state.admaView === 'categoryEdit' || state.admaView === 'categoryAdd') {
+      const back = document.querySelector('.admin-config [data-action="back-categories"]');
+      const save = document.getElementById('catSaveBtn');
+      const name = document.getElementById('catName');
+      const rep = document.getElementById('catRep');
+      const CATEGORIES_KEY = 'socya:categories';
+      const loadCats = () => { try { const raw = localStorage.getItem(CATEGORIES_KEY); if (raw) return (JSON.parse(raw)||[]); } catch(_) {} return []; };
+      if (back && !back.dataset.bound) { back.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'categories'; render(); }); back.dataset.bound = '1'; }
+      if (save && !save.dataset.bound) { save.addEventListener('click', () => { const cats = loadCats(); const id = state.selectedCategoryId || 0; const nextId = id || ((cats.reduce((max,c)=>Math.max(max,c.id),0) + 1) || 1); const obj = { id: nextId, name: String(name?.value||''), rep: String(rep?.value||'') }; const arr = cats.some(c => c.id === nextId) ? cats.map(c => (c.id===nextId?obj:c)) : [...cats, obj]; const msg = id ? tr('Categoría modificada','Category updated') : tr('Categoría creada','Category created'); try { localStorage.setItem(CATEGORIES_KEY, JSON.stringify(arr||[])); showSuccessAlert(msg); } catch(_) {} state.admaView = 'categories'; render(); }); save.dataset.bound = '1'; }
       renderIcons();
     } else {
       document.querySelectorAll('.admin-item').forEach(btn => {
@@ -1133,6 +1528,10 @@ const render = () => {
           const act = btn.dataset.action;
           if (act === 'config-site') {
             state.admaView = 'config';
+            render();
+            return;
+          } else if (act === 'config-mail') {
+            state.admaView = 'mail';
             render();
             return;
           } else if (act === 'test-config') {
@@ -1146,6 +1545,14 @@ const render = () => {
             return;
           } else if (act === 'change-admin-pass') {
             state.admaView = 'changePass';
+            render();
+            return;
+          } else if (act === 'manage-users') {
+            state.admaView = 'users';
+            render();
+            return;
+          } else if (act === 'manage-categories') {
+            state.admaView = 'categories';
             render();
             return;
           }
@@ -1317,7 +1724,7 @@ const render = () => {
       if (!file) return;
       const maxSize = 4 * 1024 * 1024; // 4MB
       if (file.size > maxSize) {
-        alert(state.preferences.language === 'en' ? 'Image too large (max 4MB).' : 'Imagen muy pesada (máximo 4MB).');
+        showErrorAlert(state.preferences.language === 'en' ? 'Image too large (max 4MB).' : 'Imagen muy pesada (máximo 4MB).');
         return;
       }
       const reader = new FileReader();
