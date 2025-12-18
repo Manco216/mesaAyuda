@@ -54,46 +54,42 @@
           <h2>Menú administrativo</h2>
         </header>
         <div class="admin-menu-grid">
-          <button type="button" class="admin-item" data-action="config-site">
+          <div class="admin-item" role="button" tabindex="0" data-action="config-site">
             <span class="admin-icon" data-lucide="settings"></span>
             <span>Configurar Sitio</span>
-          </button>
-          <button type="button" class="admin-item" data-action="test-config">
+          </div>
+          <div class="admin-item" role="button" tabindex="0" data-action="test-config">
             <span class="admin-icon" data-lucide="check-circle-2"></span>
             <span>Probar configuración</span>
-          </button>
-          <button type="button" class="admin-item" data-action="config-mail">
+          </div>
+          <div class="admin-item" role="button" tabindex="0" data-action="config-mail">
             <span class="admin-icon" data-lucide="mail"></span>
             <span>Configurar Mensajes de correo</span>
-          </button>
-          <button type="button" class="admin-item" data-action="change-admin-pass">
+          </div>
+          <div class="admin-item" role="button" tabindex="0" data-action="change-admin-pass">
             <span class="admin-icon" data-lucide="key-round"></span>
             <span>Cambiar la contraseña del administrador</span>
-          </button>
-          <button type="button" class="admin-item" data-action="manage-users">
+          </div>
+          <div class="admin-item" role="button" tabindex="0" data-action="manage-users">
             <span class="admin-icon" data-lucide="users"></span>
             <span>Administrar Usuarios</span>
-          </button>
-          <button type="button" class="admin-item" data-action="manage-categories">
+          </div>
+          <div class="admin-item" role="button" tabindex="0" data-action="manage-categories">
             <span class="admin-icon" data-lucide="tags"></span>
             <span>Administrar Categorías</span>
-          </button>
-          <button type="button" class="admin-item" data-action="manage-departments">
+          </div>
+          <div class="admin-item" role="button" tabindex="0" data-action="manage-departments">
             <span class="admin-icon" data-lucide="building-2"></span>
             <span>Administrar Departamentos</span>
-          </button>
-          <button type="button" class="admin-item" data-action="manage-priorities">
+          </div>
+          <div class="admin-item" role="button" tabindex="0" data-action="manage-priorities">
             <span class="admin-icon" data-lucide="list-checks"></span>
             <span>Administrar Prioridades</span>
-          </button>
-          <button type="button" class="admin-item" data-action="manage-states">
+          </div>
+          <div class="admin-item" role="button" tabindex="0" data-action="manage-states">
             <span class="admin-icon" data-lucide="workflow"></span>
             <span>Administrar Estados</span>
-          </button>
-          <button type="button" class="admin-item" data-action="reports">
-            <span class="admin-icon" data-lucide="file-bar-chart"></span>
-            <span>Reportes</span>
-          </button>
+          </div>
         </div>
       </section>
     </template>
@@ -281,15 +277,14 @@
           </div>
         </header>
         <form class="admin-form">
-          <div class="form-grid two users-grid">
+          <div class="form-grid one users-grid">
             <div class="form-field">
               <label>Lista de usuarios</label>
-              <input id="usersSearch" type="text" placeholder="Buscar por nombre, usuario o correo">
+              <div class="users-toolbar">
+                <input id="usersSearch" type="text" placeholder="Buscar por nombre, usuario o correo">
+                <button type="button" class="admin-config-btn primary toolbar-btn" data-action="add-user"><span data-lucide="user-plus"></span><span>Agregar</span></button>
+              </div>
               <div id="usersList" class="listbox custom-list" role="listbox" aria-label="Usuarios" tabindex="0"></div>
-            </div>
-            <div class="form-field admin-actions-vertical">
-              <button type="button" class="admin-config-btn primary" data-action="edit-user"><span data-lucide="pencil"></span><span>Editar cuenta de usuario</span></button>
-              <button type="button" class="admin-config-btn" data-action="add-user"><span data-lucide="user-plus"></span><span>Agregar usuarios nuevos</span></button>
             </div>
           </div>
         </form>
@@ -539,6 +534,241 @@
               <label for="newCatRep">Representante</label>
               <input id="newCatRep" type="text" list="catRepList" placeholder="Usuario responsable">
               <datalist id="catRepList"></datalist>
+            </div>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-departments-template">
+      <section class="admin-config" aria-label="Administrar departamentos">
+        <header class="admin-config-header">
+          <h2>Departamentos</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="departmentsForm" novalidate>
+          <div class="form-grid one">
+            <div class="form-field" style="grid-column:1 / -1">
+              <label for="departmentsSearch">Buscar</label>
+              <div class="users-toolbar">
+                <input id="departmentsSearch" type="text" placeholder="Filtrar por nombre de departamento">
+                <button type="button" class="admin-config-btn primary toolbar-btn" data-action="add-department"><span data-lucide="plus"></span><span>Agregar</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="form-grid one">
+            <div class="form-field" style="grid-column:1 / -1">
+              <table class="admin-table" aria-label="Listado de departamentos">
+                <thead>
+                  <tr>
+                    <th>Departamento</th>
+                  </tr>
+                </thead>
+                <tbody id="departmentsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-department-edit-template">
+      <section class="admin-config" aria-label="Editar departamento">
+        <header class="admin-config-header">
+          <h2>Editar departamento</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="save-department"><span data-lucide="save"></span><span>Grabar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="editDepartmentForm" novalidate>
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="deptName">Nombre del departamento</label>
+              <input id="deptName" type="text" required>
+            </div>
+          </div>
+          <div class="form-actions" style="text-align:center">
+            <button type="button" class="danger-btn" data-action="delete-department">Borrar</button>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-department-create-template">
+      <section class="admin-config" aria-label="Agregar departamento">
+        <header class="admin-config-header">
+          <h2>Agregar departamento</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="create-department"><span data-lucide="save"></span><span>Grabar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="createDepartmentForm" novalidate>
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="newDeptName">Nombre del departamento</label>
+              <input id="newDeptName" type="text" required>
+            </div>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-priorities-template">
+      <section class="admin-config" aria-label="Administrar prioridades">
+        <header class="admin-config-header">
+          <h2>Prioridades</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="prioritiesForm" novalidate>
+          <div class="form-grid one">
+            <div class="form-field" style="grid-column:1 / -1">
+              <label for="prioritiesSearch">Buscar</label>
+              <div class="users-toolbar">
+                <input id="prioritiesSearch" type="text" placeholder="Filtrar por nombre o color">
+                <button type="button" class="admin-config-btn primary toolbar-btn" data-action="add-priority"><span data-lucide="plus"></span><span>Agregar</span></button>
+              </div>
+            </div>
+          </div>
+          <div class="form-grid one">
+            <div class="form-field" style="grid-column:1 / -1">
+              <table class="admin-table" aria-label="Listado de prioridades">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Prioridad</th>
+                  </tr>
+                </thead>
+                <tbody id="prioritiesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-priority-edit-template">
+      <section class="admin-config" aria-label="Editar prioridad">
+        <header class="admin-config-header">
+          <h2>Editar prioridad</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="save-priority"><span data-lucide="save"></span><span>Grabar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="editPriorityForm" novalidate>
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="priorityName">Nombre</label>
+              <input id="priorityName" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="priorityColor">Color</label>
+              <input id="priorityColor" type="color">
+            </div>
+            
+          </div>
+        <div class="form-actions" style="text-align:center">
+          <button type="button" class="danger-btn" data-action="delete-priority">Borrar</button>
+        </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-priority-create-template">
+      <section class="admin-config" aria-label="Agregar prioridad">
+        <header class="admin-config-header">
+          <h2>Agregar prioridad</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="create-priority"><span data-lucide="save"></span><span>Grabar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="createPriorityForm" novalidate>
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="newPriorityName">Nombre</label>
+              <input id="newPriorityName" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="newPriorityColor">Color</label>
+              <input id="newPriorityColor" type="color">
+            </div>
+            
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-states-template">
+      <section class="admin-config" aria-label="Administrar estados">
+        <header class="admin-config-header states">
+          <h2>Estados</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="add-state"><span data-lucide="plus"></span><span>Agregar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="statesForm" novalidate>
+          <div class="form-grid one">
+            <div class="form-field" style="grid-column:1 / -1">
+              <table class="admin-table" aria-label="Listado de estados">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Estado</th>
+                    <th>Modificar</th>
+                  </tr>
+                </thead>
+                <tbody id="statesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-state-edit-template">
+      <section class="admin-config" aria-label="Editar estado">
+        <header class="admin-config-header">
+          <h2>Editar estado</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="save-state"><span data-lucide="save"></span><span>Grabar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="editStateForm" novalidate>
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="stateName">Nombre del estado</label>
+              <input id="stateName" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="stateClosed">Estado cerrado</label>
+              <input id="stateClosed" type="checkbox">
+            </div>
+          </div>
+          <div class="form-actions" style="text-align:center">
+            <button type="button" class="danger-btn" data-action="delete-state">Borrar</button>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template id="adma-state-create-template">
+      <section class="admin-config" aria-label="Agregar estado">
+        <header class="admin-config-header">
+          <h2>Agregar estado</h2>
+          <div class="admin-config-actions">
+            <button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>Volver</span></button>
+            <button type="button" class="admin-config-btn primary" data-action="create-state"><span data-lucide="save"></span><span>Grabar</span></button>
+          </div>
+        </header>
+        <form class="admin-form" id="createStateForm" novalidate>
+          <div class="form-grid two">
+            <div class="form-field">
+              <label for="newStateName">Nombre del estado</label>
+              <input id="newStateName" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="newStateClosed">Estado cerrado</label>
+              <input id="newStateClosed" type="checkbox">
             </div>
           </div>
         </form>

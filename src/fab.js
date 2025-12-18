@@ -1,12 +1,25 @@
 (function(){
   function ensure(){
     var cont = document.getElementById('fabContainer');
+    var isDash = (window.state && state.activePage === 'dashboard')
+      || /\/dashboard\.html$/.test(String(location && location.pathname || ''))
+      || !!document.getElementById('dashboards-template');
+    if (!isDash) {
+      if (cont) { try { cont.remove(); } catch(_){} }
+      return;
+    }
     if(!cont){
       cont = document.createElement('div');
       cont.id = 'fabContainer';
       cont.className = 'fab-container';
       cont.innerHTML = '<button id="requestsBtn" class="fab-secondary" aria-label="Peticiones" title="Peticiones"><span class="fa fa-list"></span></button><button id="chatbotBtn" class="fab-secondary" aria-label="Asistente" title="Asistente"><span class="fa fa-robot"></span></button>';
       document.body.appendChild(cont);
+    } else {
+      var hasReq = !!document.getElementById('requestsBtn');
+      var hasChat = !!document.getElementById('chatbotBtn');
+      if (!hasReq || !hasChat) {
+        cont.innerHTML = '<button id="requestsBtn" class="fab-secondary" aria-label="Peticiones" title="Peticiones"><span class="fa fa-list"></span></button><button id="chatbotBtn" class="fab-secondary" aria-label="Asistente" title="Asistente"><span class="fa fa-robot"></span></button>';
+      }
     }
     Array.prototype.forEach.call(document.querySelectorAll('#requestsBtn'), function(req){
       if(!req.dataset.fBound){
@@ -244,7 +257,67 @@
     panel.classList.add('show');
     listPanel.classList.add('dimmed');
     if (container) container.classList.add('overlaying');
-    var first = document.getElementById('reqNewUser'); if (first) first.focus();
+    var first = document.getElementById('reqNewCategory'); if (first) first.focus();
+    (function(){
+      var disableForm = function(flag){
+        var form = document.getElementById('requestNewForm');
+        if(!form) return;
+        var nodes = form.querySelectorAll('input, select, textarea, button#requestNewSave');
+        Array.prototype.forEach.call(nodes, function(el){ try { el.disabled = !!flag; } catch(_){} });
+      };
+      var applyProcess = function(proc){
+        var map = {
+          'Gestión Contable': ['Finanzas'],
+          'Soporte TI': ['Soporte'],
+          'Operaciones': ['Operaciones'],
+          'General': ['General','Soporte','Finanzas','Operaciones']
+        };
+        var el = document.getElementById('reqNewCategory');
+        if(!el) return;
+        var allowed = map[proc] || map['General'];
+        var isSelect = el.tagName && el.tagName.toUpperCase()==='SELECT';
+        if (isSelect) {
+          var allOpts = Array.prototype.map.call(el.querySelectorAll('option'), function(o){ return { v:o.value||o.textContent||'', t:o.textContent||o.value||'' }; });
+          var ph = allOpts.find(function(o){ return o.v==='' || /^\s*$/.test(o.v); });
+          var opts = allOpts.filter(function(o){ return allowed.indexOf(o.t)>=0; });
+          el.innerHTML = (ph ? '<option value="'+ph.v+'">'+(ph.t||'Seleccione')+'</option>' : '<option value="">Seleccione</option>') + opts.map(function(o){ return '<option>'+o.t+'</option>'; }).join('');
+          el.value = '';
+        } else {
+          var dl = document.getElementById('rqCategorySuggestions');
+          if(!dl){ dl = document.createElement('datalist'); dl.id = 'rqCategorySuggestions'; document.body.appendChild(dl); }
+          dl.innerHTML = allowed.map(function(t){ return '<option value="'+t+'">'; }).join('');
+          try { el.setAttribute('list','rqCategorySuggestions'); el.value=''; el.placeholder='Seleccione'; } catch(_){}
+        }
+      };
+      var ensureProcessModal = function(){
+        var m = document.getElementById('requestProcessModal');
+        if (m) return m;
+        m = document.createElement('div');
+        m.id = 'requestProcessModal';
+        m.className = 'modal';
+        m.setAttribute('hidden','true');
+        m.innerHTML = '<div class="modal-backdrop"></div><div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="processTitle"><div class="modal-header"><h2 id="processTitle">Seleccione proceso</h2></div><div class="modal-content"><div class="menu-section"><div class="menu-title">¿A cuál proceso quiere hacer la solicitud?</div><div class="menu-actions"><select id="rqProcessSelect" class="menu-select"><option value="Gestión Contable">Gestión Contable</option><option value="Soporte TI">Soporte TI</option><option value="Operaciones">Operaciones</option><option value="General">General</option></select></div></div><div class="modal-actions"><button type="button" id="rqProcessAccept" class="modal-add-btn">Aceptar</button></div></div></div>';
+        document.body.appendChild(m);
+        return m;
+      };
+      var already = !!(window.__rq && __rq.process);
+      if (already) { applyProcess(__rq.process); disableForm(false); return; }
+      var m = ensureProcessModal();
+      var accept = function(){
+        var selP = document.getElementById('rqProcessSelect');
+        var val = selP && selP.value ? String(selP.value).trim() : 'General';
+        __rq.process = val;
+        applyProcess(val);
+        disableForm(false);
+        m.classList.remove('show');
+        m.setAttribute('hidden','true');
+      };
+      var btn = m.querySelector('#rqProcessAccept');
+      disableForm(true);
+      m.classList.add('show');
+      m.removeAttribute('hidden');
+      if (btn && !btn.dataset.bound) { btn.addEventListener('click', accept); btn.dataset.bound='1'; }
+    })();
   }
   function __rqCloseNewForm(){
     var panel = document.getElementById('requestNewPanel');
@@ -265,17 +338,20 @@
     if (cancelBtn && !cancelBtn.dataset.inited){ cancelBtn.addEventListener('click', function(){ __rqCloseNewForm(); }); cancelBtn.dataset.inited = 'true'; }
     if (saveBtn && !saveBtn.dataset.inited){ saveBtn.addEventListener('click', function(){
       var v = function(id){ var el = document.getElementById(id); return (el && el.value && String(el.value).trim()) || ''; };
+      var today = new Date();
+      var dd = String(today.getDate()).padStart(2,'0');
+      var mons = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+      var mon = mons[today.getMonth()];
+      var yyyy = today.getFullYear();
       var r = {
         objetivo: v('reqNewCategory') || 'Nueva petición',
         referencia: v('reqNewDescription').slice(0,80),
         equipo: v('reqNewDept'),
-        responsable: v('reqNewAssign'),
-        fecha: v('reqNewStatus') || '',
-        estado: v('reqNewStatus') || 'En curso',
+        responsable: 'Sin asignar',
+        fecha: dd+' '+mon+' '+yyyy,
+        estado: 'Solicitado',
         notas: v('reqNewDescription'),
-        sentByMe: true,
-        user: v('reqNewUser'),
-        email: v('reqNewEmail')
+        sentByMe: true
       };
       __rq.all = [r].concat(__rq.all);
       __rq.my = [r].concat(__rq.my);
@@ -303,6 +379,14 @@
       modal.innerHTML = '<div class="modal-backdrop"></div><div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="requestsTitle"><div class="modal-header"><h2 id="requestsTitle">Peticiones</h2><div class="modal-header-actions"><button type="button" id="requestsClose" class="modal-close" aria-label="Cerrar"><span data-lucide="x"></span></button></div></div><div class="modal-content"><div class="requests-container" id="requestsContainer"><div class="requests-topbar" role="toolbar" aria-label="Navegación de peticiones"><div class="tabs" role="tablist"><button id="reqTabMy" class="tab-btn active" role="tab" aria-selected="true">Mis Peticiones</button><button id="reqTabReceived" class="tab-btn" role="tab" aria-selected="false">Peticiones Recibidas</button></div><div class="search-row" role="search"><div class="search-input-wrap"><input id="requestsSearchInput" type="text" placeholder="Buscar" aria-label="Buscar peticiones" autocomplete="off" /><ul id="requestsSearchSuggestions" class="search-suggestions" hidden aria-label="Sugerencias"></ul></div><button id="requestNewBtn" type="button" class="modal-add-btn" aria-label="Nueva petición">Nueva petición</button></div></div><div id="requestsListPanel" class="requests-panel"><ul id="requestsList" class="requests-list" aria-live="polite" aria-label="Lista de peticiones"></ul></div><div id="requestNewPanel" class="requests-panel details" hidden aria-hidden="true"><div class="details-header"><h3>Nueva petición</h3><button type="button" id="requestNewCancel" class="modal-secondary-btn" aria-label="Cancelar">Cancelar</button></div><div class="details-content"><form id="requestNewForm" class="request-form"><div class="form-grid"><div class="field"><label for="reqNewUser">Usuario</label><input id="reqNewUser" type="text" /></div><div class="field"><label for="reqNewEmail">E‑mail</label><input id="reqNewEmail" type="email" /></div><div class="field"><label for="reqNewDept">Departamento</label><input id="reqNewDept" type="text" /></div><div class="field"><label for="reqNewCategory">Categoría</label><input id="reqNewCategory" type="text" /></div><div class="field"><label for="reqNewStatus">Estado</label><input id="reqNewStatus" type="text" /></div><div class="field"><label for="reqNewPriority">Prioridad</label><input id="reqNewPriority" type="text" /></div><div class="field"><label for="reqNewAssign">Asignado a</label><input id="reqNewAssign" type="text" /></div></div><div class="field"><label for="reqNewDescription">Descripción</label><textarea id="reqNewDescription"></textarea></div><div class="modal-actions"><button type="button" id="requestNewSave" class="modal-add-btn">Guardar</button></div><div id="requestNewStatus" class="form-status"></div></form></div></div></div></div>';
       document.body.appendChild(modal);
       if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch(_){} }
+      try {
+        var ct = document.getElementById('reqNewUser'); if (ct) { var f = ct.closest('.field'); if (f) f.remove(); }
+        var em = document.getElementById('reqNewEmail'); if (em) { var f2 = em.closest('.field'); if (f2) f2.remove(); }
+        var dp = document.getElementById('reqNewDept'); if (dp) { var f3 = dp.closest('.field'); if (f3) f3.remove(); }
+        var st = document.getElementById('reqNewStatus'); if (st) { var f4 = st.closest('.field'); if (f4) f4.remove(); }
+        var asg = document.getElementById('reqNewAssign'); if (asg) { var f5 = asg.closest('.field'); if (f5) f5.remove(); }
+        var tm = document.getElementById('reqNewTime'); if (tm) { var f6 = tm.closest('.field'); if (f6) f6.remove(); }
+      } catch(_){ }
       return modal;
     };
   }

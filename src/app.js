@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -1972,6 +1972,30 @@ function openChartModal(defaultId, previewType) {
     if (recBtn && !recBtn.dataset.inited) { recBtn.addEventListener('click', () => setRequestsView('received')); recBtn.dataset.inited = 'true'; }
     const newBtn = document.getElementById('requestNewBtn');
     if (newBtn && !newBtn.dataset.inited) { newBtn.addEventListener('click', () => openNewRequestForm()); newBtn.dataset.inited = 'true'; }
+    (function(){
+      const sel = document.getElementById('reqNewPriority');
+      if (!sel) return;
+      const ensureHex = (hex) => { const h = String(hex||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(h) ? (h.startsWith('#')?h:'#'+h) : ''; };
+      const rgbToHex = ({r,g,b}) => '#' + [r,g,b].map(v => { const s = Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2,'0'); return s; }).join('');
+      const readBadgeHex = (cls) => { const el = document.createElement('span'); el.className = 'status-badge '+String(cls||'status-recent'); el.style.position='fixed'; el.style.left='-10000px'; el.style.top='-10000px'; document.body.appendChild(el); const c = window.getComputedStyle(el).backgroundColor || 'rgb(91,141,239)'; try { el.remove(); } catch(_) {} const m = c.match(/rgb\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)/i); return m ? rgbToHex({ r:Number(m[1]), g:Number(m[2]), b:Number(m[3]) }) : '#5B8DEF'; };
+      let arr = [];
+      try { const raw = localStorage.getItem('socya:priorities'); if (raw) { const j = JSON.parse(raw); if (Array.isArray(j)) arr = j; } } catch(_){ }
+      try { if ((!arr || arr.length === 0) && typeof state !== 'undefined' && Array.isArray(state.priorities)) arr = state.priorities; } catch(_){ }
+      const items = Array.isArray(arr) ? arr.map(p => { const name = String(p.name||'').trim(); const color = ensureHex(p.color) || readBadgeHex(p.style); return name ? { name, color } : null; }).filter(Boolean) : [];
+      [{ name:'Urgente', color:'#8B0000' }, { name:'Reciente', color:'#5B8DEF' }, { name:'Por vencer', color:'#FF4444' }].forEach(d => { if (!items.some(it => it.name.toLowerCase() === d.name.toLowerCase())) items.push(d); });
+      const base = '<option value="">Seleccione</option>';
+      if (items.length) {
+        const opts = items.map(it => `<option value="${it.name}" data-color="${it.color}" style="color:${it.color}">${it.name}</option>`).join('');
+        sel.innerHTML = base + opts;
+      } else {
+        sel.innerHTML = base + '<option>Baja</option><option>Media</option><option>Alta</option><option>Crítica</option>';
+      }
+      let swatch = sel.nextElementSibling && sel.nextElementSibling.classList && sel.nextElementSibling.classList.contains('priority-swatch') ? sel.nextElementSibling : null;
+      if (!swatch) { swatch = document.createElement('span'); swatch.className = 'priority-swatch'; swatch.style.display='inline-block'; swatch.style.width='12px'; swatch.style.height='12px'; swatch.style.borderRadius='50%'; swatch.style.marginLeft='8px'; swatch.style.border='1px solid var(--color-border)'; if (sel.parentElement) sel.parentElement.appendChild(swatch); else sel.insertAdjacentElement('afterend', swatch); }
+      const applySwatch = () => { const opt = sel.selectedOptions && sel.selectedOptions[0]; const color = opt?.dataset?.color || ''; swatch.style.backgroundColor = color || 'transparent'; };
+      applySwatch();
+      sel.addEventListener('change', applySwatch);
+    })();
     initNewRequestForm();
     const filtersBarExisting = document.querySelector('#requestsContainer .requests-filters');
     if (!filtersBarExisting && container) {
@@ -2192,6 +2216,18 @@ function openChartModal(defaultId, previewType) {
     const topNewBtn = document.getElementById('requestNewBtn'); if (topNewBtn) { try { topNewBtn.remove(); } catch(_){} }
     const newBreadcrumb = modal.querySelector('#requestNewPanel .details-breadcrumb'); if (newBreadcrumb) { try { newBreadcrumb.remove(); } catch(_){} }
     const newCancelBtn = document.getElementById('requestNewCancel'); if (newCancelBtn) { try { newCancelBtn.remove(); } catch(_){} }
+    const contactTitle = document.getElementById('sec-contact');
+    const contactSection = contactTitle && contactTitle.closest('.details-section');
+    if (contactSection) { try { contactSection.remove(); } catch(_){} }
+    const fldStatus = document.getElementById('reqNewStatus');
+    const fldAssign = document.getElementById('reqNewAssign');
+    const fldTime = document.getElementById('reqNewTime');
+    const wrapStatus = fldStatus && fldStatus.closest('.field');
+    const wrapAssign = fldAssign && fldAssign.closest('.field');
+    const wrapTime = fldTime && fldTime.closest('.field');
+    try { if (wrapStatus) wrapStatus.remove(); } catch(_){}
+    try { if (wrapAssign) wrapAssign.remove(); } catch(_){}
+    try { if (wrapTime) wrapTime.remove(); } catch(_){}
     const fMy = document.getElementById('rqFilterMy'); if (fMy && !fMy.dataset.inited) { fMy.addEventListener('click', () => { requestsState.filterMode = null; const b = document.getElementById('rqMenuMy'); if (b) b.click(); else setRequestsView('my'); }); fMy.dataset.inited = 'true'; }
     const fClsAll = document.getElementById('rqFilterClosedAll'); if (fClsAll && !fClsAll.dataset.inited) { fClsAll.addEventListener('click', () => { requestsState.filterMode = 'closed_all'; setClosedActive('all'); updateRequestsList(); }); fClsAll.dataset.inited = 'true'; }
     const fClsMine = document.getElementById('rqFilterClosedMine'); if (fClsMine && !fClsMine.dataset.inited) { fClsMine.addEventListener('click', () => { requestsState.filterMode = 'closed_my'; setRequestsView('my'); setClosedActive('mine'); updateRequestsList(); }); fClsMine.dataset.inited = 'true'; }
@@ -2370,8 +2406,84 @@ function openChartModal(defaultId, previewType) {
     // Ocultar la lista para evitar distracciones durante la creación
     listPanel.hidden = true;
     if (container) container.classList.add('overlaying');
-    const first = document.getElementById('reqNewUser');
+    const first = document.getElementById('reqNewCategory');
     if (first) first.focus();
+    (function(){
+      const sel = document.getElementById('reqNewPriority');
+      if (!sel) return;
+      const ensureHex = (hex) => { const h = String(hex||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(h) ? (h.startsWith('#')?h:'#'+h) : ''; };
+      const rgbToHex = ({r,g,b}) => '#' + [r,g,b].map(v => { const s = Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2,'0'); return s; }).join('');
+      const readBadgeHex = (cls) => { const el = document.createElement('span'); el.className = 'status-badge '+String(cls||'status-recent'); el.style.position='fixed'; el.style.left='-10000px'; el.style.top='-10000px'; document.body.appendChild(el); const c = window.getComputedStyle(el).backgroundColor || 'rgb(91,141,239)'; try { el.remove(); } catch(_) {} const m = c.match(/rgb\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)/i); return m ? rgbToHex({ r:Number(m[1]), g:Number(m[2]), b:Number(m[3]) }) : '#5B8DEF'; };
+      let arr = [];
+      try { const raw = localStorage.getItem('socya:priorities'); if (raw) { const j = JSON.parse(raw); if (Array.isArray(j)) arr = j; } } catch(_){ }
+      try { if ((!arr || arr.length === 0) && typeof state !== 'undefined' && Array.isArray(state.priorities)) arr = state.priorities; } catch(_){ }
+      const items = Array.isArray(arr) ? arr.map(p => { const name = String(p.name||'').trim(); const color = ensureHex(p.color) || readBadgeHex(p.style); return name ? { name, color } : null; }).filter(Boolean) : [];
+      [{ name:'Urgente', color:'#8B0000' }, { name:'Reciente', color:'#5B8DEF' }, { name:'Por vencer', color:'#FF4444' }].forEach(d => { if (!items.some(it => it.name.toLowerCase() === d.name.toLowerCase())) items.push(d); });
+      const base = '<option value="">Seleccione</option>';
+      if (items.length) {
+        const opts = items.map(it => `<option value="${it.name}" data-color="${it.color}" style="color:${it.color}">${it.name}</option>`).join('');
+        sel.innerHTML = base + opts;
+      } else {
+        sel.innerHTML = base + '<option>Baja</option><option>Media</option><option>Alta</option><option>Crítica</option>';
+      }
+      let swatch = sel.nextElementSibling && sel.nextElementSibling.classList && sel.nextElementSibling.classList.contains('priority-swatch') ? sel.nextElementSibling : null;
+      if (!swatch) { swatch = document.createElement('span'); swatch.className = 'priority-swatch'; swatch.style.display='inline-block'; swatch.style.width='12px'; swatch.style.height='12px'; swatch.style.borderRadius='50%'; swatch.style.marginLeft='8px'; swatch.style.border='1px solid var(--color-border)'; if (sel.parentElement) sel.parentElement.appendChild(swatch); else sel.insertAdjacentElement('afterend', swatch); }
+      const applySwatch = () => { const opt = sel.selectedOptions && sel.selectedOptions[0]; const color = opt?.dataset?.color || ''; swatch.style.backgroundColor = color || 'transparent'; };
+      applySwatch();
+      sel.addEventListener('change', applySwatch);
+    })();
+    (function(){
+      const disableForm = (flag) => {
+        const form = document.getElementById('requestNewForm');
+        if (!form) return;
+        const nodes = form.querySelectorAll('input, select, textarea, button#requestNewSave');
+        nodes.forEach(el => { try { el.disabled = !!flag; } catch(_){} });
+      };
+      const applyProcess = (proc) => {
+        const map = {
+          'Gestión Contable': ['Finanzas'],
+          'Soporte TI': ['Soporte'],
+          'Operaciones': ['Operaciones'],
+          'General': ['General','Soporte','Finanzas','Operaciones']
+        };
+        const sel = document.getElementById('reqNewCategory');
+        if (!sel) return;
+        const allowed = map[proc] || map['General'];
+        const allOpts = Array.from(sel.querySelectorAll('option')).map(o => ({ v:o.value||o.textContent||'', t:o.textContent||o.value||'' }));
+        const ph = allOpts.find(o => o.v==='' || /^\s*$/.test(o.v));
+        const opts = allOpts.filter(o => allowed.includes(o.t));
+        sel.innerHTML = (ph ? `<option value="${ph.v}">${ph.t||'Seleccione'}</option>` : '<option value="">Seleccione</option>') + opts.map(o => `<option>${o.t}</option>`).join('');
+        sel.value = '';
+      };
+      const ensureProcessModal = () => {
+        let m = document.getElementById('requestProcessModal');
+        if (m) return m;
+        m = document.createElement('div');
+        m.id = 'requestProcessModal';
+        m.className = 'modal';
+        m.setAttribute('hidden','true');
+        m.innerHTML = '<div class="modal-backdrop"></div><div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="processTitle"><div class="modal-header"><h2 id="processTitle">Seleccione proceso</h2></div><div class="modal-content"><div class="menu-section"><div class="menu-title">¿A cuál proceso quiere hacer la solicitud?</div><div class="menu-actions"><select id="rqProcessSelect" class="menu-select"><option value="Gestión Contable">Gestión Contable</option><option value="Soporte TI">Soporte TI</option><option value="Operaciones">Operaciones</option><option value="General">General</option></select></div></div><div class="modal-actions"><button type="button" id="rqProcessAccept" class="modal-add-btn">Aceptar</button></div></div></div>';
+        document.body.appendChild(m);
+        return m;
+      };
+      const already = !!(window.requestsState && requestsState.process);
+      if (already) { applyProcess(requestsState.process); disableForm(false); return; }
+      const m = ensureProcessModal();
+      const accept = () => {
+        const selP = document.getElementById('rqProcessSelect');
+        const val = selP && selP.value ? String(selP.value).trim() : 'General';
+        requestsState.process = val;
+        applyProcess(val);
+        disableForm(false);
+        m.classList.remove('show');
+        m.setAttribute('hidden','true');
+      };
+      const btn = m.querySelector('#rqProcessAccept');
+      disableForm(true);
+      m.classList.add('show');
+      m.removeAttribute('hidden');
+      if (btn && !btn.dataset.bound) { btn.addEventListener('click', accept); btn.dataset.bound='1'; }
+    })();
   }
 
   function closeNewRequestForm() {
@@ -2392,7 +2504,7 @@ function openChartModal(defaultId, previewType) {
   }
 
   function resetNewRequestForm() {
-    const ids = ['reqNewUser','reqNewEmail','reqNewDept','reqNewLocation','reqNewPhone','reqNewCategory','reqNewStatus','reqNewPriority','reqNewAssign','reqNewTime','reqNewDescription'];
+    const ids = ['reqNewCategory','reqNewPriority','reqNewDescription'];
     ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = el.type === 'number' ? '0' : ''; });
     const files = document.getElementById('reqNewFiles'); if (files) files.value = '';
     const list = document.getElementById('reqNewFileList'); if (list) list.innerHTML = '';
@@ -2468,13 +2580,11 @@ function openChartModal(defaultId, previewType) {
   function validateNewRequestForm() {
     const val = (id) => document.getElementById(id)?.value?.trim() || '';
     const num = (id) => Number(document.getElementById(id)?.value || 0);
-    const requiredIds = ['reqNewUser','reqNewEmail','reqNewDept','reqNewCategory','reqNewStatus','reqNewPriority','reqNewAssign','reqNewDescription'];
+    const requiredIds = ['reqNewCategory','reqNewPriority','reqNewDescription'];
     let ok = true;
     requiredIds.forEach(id => { clearFieldError(id); if (!val(id)) { showFieldError(id, 'Campo obligatorio'); ok = false; } });
     const email = val('reqNewEmail');
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showFieldError('reqNewEmail','E‑mail inválido'); ok = false; }
-    const time = num('reqNewTime');
-    if (time < 0) { showFieldError('reqNewTime','Debe ser 0 o mayor'); ok = false; }
     const filesInput = document.getElementById('reqNewFiles');
     const files = Array.from(filesInput?.files || []);
     const MAX_FILE = 10 * 1024 * 1024;
@@ -2502,10 +2612,7 @@ function openChartModal(defaultId, previewType) {
     const location = v('reqNewLocation');
     const phone = v('reqNewPhone');
     const category = v('reqNewCategory');
-    const statusVal = v('reqNewStatus');
     const priority = v('reqNewPriority');
-    const assign = v('reqNewAssign');
-    const timeSpent = n('reqNewTime');
     const description = v('reqNewDescription');
     const filesInput = document.getElementById('reqNewFiles');
     const files = Array.from(filesInput?.files || []);
@@ -2517,9 +2624,9 @@ function openChartModal(defaultId, previewType) {
       objetivo: category || 'Nueva petición',
       referencia: description ? description.slice(0, 80) : '',
       equipo: dept,
-      responsable: assign,
+      responsable: 'Sin asignar',
       fecha,
-      estado: statusVal,
+      estado: 'Solicitado',
       notas: description,
       adjuntos: attachments,
       sentByMe: true,
@@ -2527,8 +2634,7 @@ function openChartModal(defaultId, previewType) {
       email,
       location,
       phone,
-      priority,
-      timeSpent
+      priority
     };
     requestsState.all = [r, ...requestsState.all];
     requestsState.my = [r, ...requestsState.my];

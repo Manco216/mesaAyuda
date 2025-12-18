@@ -281,17 +281,37 @@ const tr = (() => {
 const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const weekdayShort = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
-const getCategoryColor = (category) => ({
-  urgent: '#8B0000',
-  expiring: '#FF4444',
-  recent: '#5B8DEF',
-}[category] || '#999');
+const getCategoryColor = (category) => {
+  const cat = String(category || '').toLowerCase();
+  const priorities = (typeof state !== 'undefined' && Array.isArray(state.priorities)) ? state.priorities : [];
+  const match = priorities.find(p =>
+    String(p.style || '').toLowerCase() === ('status-' + cat) ||
+    String(p.name || '').toLowerCase() === cat
+  );
+  if (match && match.color) return match.color;
+  const defaults = { urgent: '#8B0000', expiring: '#FF4444', recent: '#5B8DEF' };
+  return defaults[cat] || '#999';
+};
 
-const getCategoryLabel = (category) => ({
-  urgent: tr('Urgente','Urgent'),
-  expiring: tr('Por vencer','Expiring'),
-  recent: tr('Reciente','Recent'),
-}[category] || tr('Otro','Other'));
+const getCategoryLabel = (category) => {
+  const cat = String(category || '').toLowerCase();
+  const priorities = (typeof state !== 'undefined' && Array.isArray(state.priorities)) ? state.priorities : [];
+  const match = priorities.find(p =>
+    String(p.style || '').toLowerCase() === ('status-' + cat) ||
+    String(p.name || '').toLowerCase() === cat
+  );
+  if (match && match.name) return match.name;
+  const defaults = {
+    urgent: tr('Urgente','Urgent'),
+    expiring: tr('Por vencer','Expiring'),
+    recent: tr('Reciente','Recent'),
+  };
+  const def = defaults[cat];
+  if (def) return def;
+  return cat ? (cat.charAt(0).toUpperCase() + cat.slice(1)) : tr('Otro','Other');
+};
+
+const getTaskLabel = (task) => String((task && task.categoryLabel) || getCategoryLabel(task?.category));
 
 const passwordStrength = (pwd) => {
   const s = (pwd || '').trim();
@@ -389,6 +409,80 @@ const loadCategories = () => {
   ];
 };
 const saveCategories = () => { try { localStorage.setItem(CATEGORIES_KEY, JSON.stringify(state.categories)); } catch (_) {} };
+const DEPARTMENTS_KEY = 'socya:departments';
+const loadDepartments = () => {
+  try {
+    const raw = localStorage.getItem(DEPARTMENTS_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) { state.departments = arr; return; }
+    }
+  } catch (_) {}
+  state.departments = [
+    { id: 1, name: 'Operaciones TI' },
+    { id: 2, name: 'Finanzas' },
+  ];
+};
+const saveDepartments = () => { try { localStorage.setItem(DEPARTMENTS_KEY, JSON.stringify(state.departments)); } catch (_) {} };
+const STATES_KEY = 'socya:states';
+const loadStates = () => {
+  const defaults = [
+    { id: 1, name: 'Solicitado', closed: false },
+    { id: 2, name: 'En trámite', closed: false },
+    { id: 3, name: 'En cotización', closed: false },
+    { id: 4, name: 'Esperando aprobación', closed: false },
+    { id: 5, name: 'Solicitado al proveedor', closed: false },
+    { id: 6, name: 'En espera de usuario', closed: false },
+    { id: 7, name: 'Solucionado', closed: true },
+    { id: 8, name: 'Cerrado sin solución', closed: true }
+  ];
+  try {
+    const raw = localStorage.getItem(STATES_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length > 0) { state.states = arr; return; }
+    }
+  } catch (_) {}
+  state.states = defaults.slice();
+};
+const saveStates = () => { try { localStorage.setItem(STATES_KEY, JSON.stringify(state.states||[])); } catch (_) {} };
+const PRIORITIES_KEY = 'socya:priorities';
+const loadPriorities = () => {
+  const defaults = [
+    { id: 1, name: 'Urgente', style: 'status-urgent' },
+    { id: 2, name: 'Reciente', style: 'status-recent' },
+    { id: 3, name: 'Por vencer', style: 'status-expiring' },
+  ];
+  try {
+    const raw = localStorage.getItem(PRIORITIES_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length > 0) {
+        state.priorities = arr;
+      } else {
+        state.priorities = defaults.slice();
+      }
+    } else {
+      state.priorities = defaults.slice();
+    }
+  } catch (_) {
+    state.priorities = defaults.slice();
+  }
+  const cats = Array.from(new Set((state.tasks || []).map(t => String(t.category || '').toLowerCase()).filter(Boolean)));
+  let nextId = (state.priorities || []).reduce((m, x) => Math.max(m, Number(x.id) || 0), 0);
+  cats.forEach(cat => {
+    const exists = (state.priorities || []).some(p =>
+      String(p.style || '').toLowerCase() === ('status-' + cat) ||
+      String(p.name || '').toLowerCase() === getCategoryLabel(cat).toLowerCase() ||
+      String(p.name || '').toLowerCase() === cat
+    );
+    if (!exists) {
+      nextId += 1;
+      state.priorities = [ ...(state.priorities || []), { id: nextId, name: getCategoryLabel(cat), style: 'status-' + cat } ];
+    }
+  });
+};
+const savePriorities = () => { try { localStorage.setItem(PRIORITIES_KEY, JSON.stringify(state.priorities)); } catch (_) {} };
 const setCssVar = (name, value) => { document.documentElement.style.setProperty(name, value); };
 // Valores de marca por defecto (coinciden con :root en CSS)
 const DEFAULT_BRAND = { primary: '#0c2340', secondary: '#7e63d4', accent: '#7c3aed' };
@@ -404,6 +498,92 @@ const rgbToHex = ({r,g,b}) => '#' + [r,g,b].map(v => {
   const s = Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2,'0');
   return s;
 }).join('');
+const rgbToHsl = (r,g,b) => {
+  r = r/255; g = g/255; b = b/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h = h * 60;
+  }
+  return { h, s: s*100, l: l*100 };
+};
+const hslToHex = (h, s, l) => {
+  s = s/100; l = l/100;
+  const c = (1 - Math.abs(2*l - 1)) * s;
+  const x = c * (1 - Math.abs(((h/60) % 2) - 1));
+  const m = l - c/2;
+  let r=0,g=0,b=0;
+  if (h >= 0 && h < 60) { r=c; g=x; b=0; }
+  else if (h < 120) { r=x; g=c; b=0; }
+  else if (h < 180) { r=0; g=c; b=x; }
+  else if (h < 240) { r=0; g=x; b=c; }
+  else if (h < 300) { r=x; g=0; b=c; }
+  else { r=c; g=0; b=x; }
+  r = Math.round((r+m)*255);
+  g = Math.round((g+m)*255);
+  b = Math.round((b+m)*255);
+  return rgbToHex({ r, g, b });
+};
+const setupColorWheel = (inputId) => {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const field = inp.closest('.form-field');
+  if (!field || field.querySelector('.color-wheel')) return;
+  const container = document.createElement('div'); container.className = 'color-picker-pop';
+  const wheel = document.createElement('div'); wheel.className = 'color-wheel';
+  const thumb = document.createElement('div'); thumb.className = 'wheel-thumb';
+  wheel.appendChild(thumb);
+  container.appendChild(wheel);
+  field.appendChild(container);
+  const ensureHexLocal = (hex) => { const h = String(hex||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(h) ? (h.startsWith('#')?h:'#'+h) : '#5B8DEF'; };
+  const positionThumb = (hex) => {
+    const { r,g,b } = hexToRgb(ensureHexLocal(hex));
+    const { h } = rgbToHsl(r,g,b);
+    const rect = wheel.getBoundingClientRect();
+    const radius = rect.width/2;
+    const track = radius * 0.7;
+    const rad = (h * Math.PI) / 180;
+    const x = radius + track * Math.cos(rad);
+    const y = radius + track * Math.sin(rad);
+    thumb.style.left = x + 'px';
+    thumb.style.top = y + 'px';
+  };
+  positionThumb(inp.value || '#5B8DEF');
+  const pickAt = (clientX, clientY) => {
+    const rect = wheel.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const cx = rect.width/2;
+    const cy = rect.height/2;
+    let ang = Math.atan2(y - cy, x - cx) * 180 / Math.PI;
+    if (ang < 0) ang += 360;
+    const hex = hslToHex(ang, 100, 50);
+    inp.value = hex;
+    positionThumb(hex);
+    try { inp.dispatchEvent(new Event('input', { bubbles: true })); } catch(_) {}
+  };
+  let dragging = false;
+  wheel.addEventListener('click', (e) => { pickAt(e.clientX, e.clientY); });
+  wheel.addEventListener('mousedown', (e) => { dragging = true; pickAt(e.clientX, e.clientY); e.preventDefault(); });
+  window.addEventListener('mousemove', (e) => { if (dragging) pickAt(e.clientX, e.clientY); });
+  window.addEventListener('mouseup', () => { dragging = false; });
+  const show = () => { container.classList.add('show'); positionThumb(inp.value || '#5B8DEF'); };
+  const hide = (target) => { if (!container.contains(target) && target !== inp) container.classList.remove('show'); };
+  if (!inp.dataset.boundWheel) {
+    inp.addEventListener('focus', () => show());
+    inp.addEventListener('click', () => show());
+    window.addEventListener('click', (e) => hide(e.target));
+    inp.addEventListener('input', () => positionThumb(inp.value || '#5B8DEF'));
+    inp.dataset.boundWheel = '1';
+  }
+};
 const mix = (hexA, hexB, t) => {
   const a = hexToRgb(hexA); const b = hexToRgb(hexB);
   return rgbToHex({ r: a.r*(1-t)+b.r*t, g: a.g*(1-t)+b.g*t, b: a.b*(1-t)+b.b*t });
@@ -961,7 +1141,7 @@ const renderCalendar = () => {
           <label>${tr('Estado:','Status:')}</label>
           ${selected.solutionDate && new Date(selected.solutionDate) <= new Date()
             ? `<span class="status-badge status-solved">${tr('Ya solucionado','Already solved')}</span>`
-            : `<span class="status-badge status-${selected.category}">${getCategoryLabel(selected.category)}</span>`}
+            : `<span class="status-badge" style="background-color:${getCategoryColor(selected.category)}">${getTaskLabel(selected)}</span>`}
         </div>
       </div>
     </div>
@@ -998,7 +1178,7 @@ const renderTaskItem = (task, selected) => `
       <button class="task-delete-btn" data-delete-id="${task.id}" aria-label="${t('deletePendingAria')}"><span data-lucide="trash-2"></span></button>
     </div>
     <div class="task-item-footer">
-      <span class="status-badge status-${task.category}">${getCategoryLabel(task.category)}</span>
+      <span class="status-badge" style="background-color:${getCategoryColor(task.category)}">${getTaskLabel(task)}</span>
     </div>
   </div>
 `;
@@ -1031,7 +1211,21 @@ const renderTaskList = () => {
 };
 
 // ---- Modal de creación de pendiente ----
-const renderEventModal = () => `
+const renderEventModal = () => {
+  const priorities = Array.isArray(state.priorities) ? state.priorities : [];
+  const toCat = (p) => {
+    const s = String(p.style||'').toLowerCase();
+    if (s.startsWith('status-')) return s.slice(7);
+    const n = String(p.name||'').toLowerCase();
+    if (n.includes('urg')) return 'urgent';
+    if (n.includes('venc') || n.includes('expir')) return 'expiring';
+    if (n.includes('reci')) return 'recent';
+    return n || 'recent';
+  };
+  const opts = priorities && priorities.length
+    ? priorities.map(p => `<option value="${toCat(p)}" data-priority-id="${p.id}">${String(p.name||'')}</option>`).join('')
+    : `<option value="recent">${t('filterRecent')}</option><option value="urgent">${t('filterUrgent')}</option><option value="expiring">${t('filterExpiring')}</option>`;
+  return `
   <div class="modal-overlay">
     <div class="event-modal">
       <div class="modal-header">
@@ -1045,11 +1239,7 @@ const renderEventModal = () => `
         </div>
         <div class="form-group">
           <label><span data-lucide="tag"></span> ${t('eventCategoryLabel')}</label>
-          <select id="modal-category-select">
-            <option value="recent">${t('filterRecent')}</option>
-            <option value="urgent">${t('filterUrgent')}</option>
-            <option value="expiring">${t('filterExpiring')}</option>
-          </select>
+          <select id="modal-category-select">${opts}</select>
         </div>
         <div class="form-group">
           <label><span data-lucide="clock"></span> ${t('eventRequestLabel')}</label>
@@ -1063,6 +1253,7 @@ const renderEventModal = () => `
     </div>
   </div>
 `;
+};
 
 const renderDashboards = () => '';
 
@@ -1078,7 +1269,6 @@ const render = () => {
         const passTpl = getTemplateHTML('adma-change-pass-template');
         if (passTpl) return passTpl;
         return `<section class="admin-config"><h2>Cambiar la contraseña del administrador</h2></section>`;
-<<<<<<< HEAD
       } else if (state.admaView === 'mail' || state.admaView === 'mailEdit') {
         const mailDefaults = {
           user_new: { subject: 'Nueva solicitud de servicio #[problemid]', body: 'Su solicitud fue registrada correctamente.\n\nPuede ingresar a su solicitud con el siguiente enlace: [url]\n\nDETALLES\nID: [problemid]\nUsuario: [uid]' },
@@ -1152,79 +1342,54 @@ const render = () => {
             </form>
           </section>`;
         }
-      } else if (state.admaView === 'users' || state.admaView === 'userEdit' || state.admaView === 'userAdd') {
-        const USERS_KEY = 'socya:users';
-        const defaults = [
-          { id: 1, username: 'aaguirre', firstName: 'Alejandro', lastName: 'Aguirre Gutiérrez', email: 'aaguirre@socya.org.co', pager: '', phone: '3184695944', location: 'Pereira', department: 'DIRECCION DE PROYECTOS SOCIOAMBIENTALES', language: 'es', isSupport: false, access: 'normal', password: '' },
-          { id: 2, username: 'aarango', firstName: 'Alexander', lastName: 'Arango Sánchez', email: 'aarango@socya.org.co', pager: '', phone: '', location: '', department: 'DIRECCION DE PROYECTOS SOCIOAMBIENTALES', language: 'es', isSupport: false, access: 'normal', password: '' },
-          { id: 3, username: 'aarboleda', firstName: 'Angie Paola', lastName: 'Arboleda Marquez', email: 'aarboleda@socya.org.co', pager: '', phone: '', location: '', department: 'DIRECCION DE PROYECTOS SOCIOAMBIENTALES', language: 'es', isSupport: false, access: 'normal', password: '' }
-        ];
-        const loadUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw) return (JSON.parse(raw)||defaults); } catch(_) {} return defaults; };
-        const esc = (s) => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const users = loadUsers();
-        const departments = [ 'DIRECCION DE PROYECTOS SOCIOAMBIENTALES', 'DIRECCION ADMINISTRATIVA Y FINANCIERA', 'TECNOLOGÍAS DE INFORMACIÓN', 'Not Specified' ];
-        const langs = [ ['es', tr('Español (Spanish)','Spanish (Español)')], ['en', tr('Inglés (English)','English (English)')] ];
-        const accessLevels = [ ['normal', tr('Normal','Normal')], ['admin', tr('Administrador','Admin')] ];
-        const selId = state.selectedUserId || users[0]?.id || 0;
-        if (state.admaView === 'users') {
-          return `
-          <section class="admin-config" aria-label="Administrar usuarios">
-            <header class="admin-config-header"><h2>${tr('Administrar Usuarios','Manage Users')}</h2><div class="admin-config-actions"><button type="button" class="admin-config-btn" data-action="back"><span data-lucide="arrow-left"></span><span>${tr('Volver','Back')}</span></button></div></header>
-            <form class="admin-form" id="manageUsersForm">
-              <div class="form-field">
-                <select id="userList" size="12">${users.map(u => `<option value="${u.id}" ${u.id===selId?'selected':''}>${esc(u.username)} (${esc(u.firstName)} ${esc(u.lastName)})</option>`).join('')}</select>
-              </div>
-              <div style="padding-top:10px"><button type="button" id="editUserBtn" class="admin-config-btn primary"><span data-lucide="square-pen"></span><span>${tr('Editar usuario','Edit User Account')}</span></button></div>
-              <div style="padding-top:10px"><button type="button" id="addUserLink" class="admin-config-btn primary"><span data-lucide="user-plus"></span><span>${tr('Agregar usuarios','Add New Users')}</span></button></div>
-            </form>
-          </section>`;
-        }
-        if (state.admaView === 'userEdit') {
-          const u = users.find(x => x.id === selId) || users[0] || { id: 0, username:'', firstName:'', lastName:'', email:'', pager:'', phone:'', location:'', department:'Not Specified', language:'es', isSupport:false, access:'normal', password:'' };
-          return `
-          <section class="admin-config" aria-label="Actualizar usuario">
-            <header class="admin-config-header"><h2>${tr('Actualizar Información','Update Information')}</h2><div class="admin-config-actions"><button type="button" class="admin-config-btn" data-action="back-users"><span data-lucide="arrow-left"></span><span>${tr('Volver','Back')}</span></button></div></header>
-            <form id="userEditForm" class="admin-form" novalidate>
-              <div class="form-field"><label for="uUser">${tr('Usuario','User Name')}:</label><input id="uUser" type="text" value="${esc(u.username)}" disabled /></div>
-              <div class="form-field"><label for="uFirst">${tr('Nombre','First Name')}:</label><input id="uFirst" type="text" required value="${esc(u.firstName)}" /></div>
-              <div class="form-field"><label for="uLast">${tr('Apellido','Last Name')}:</label><input id="uLast" type="text" required value="${esc(u.lastName)}" /></div>
-              <div class="form-field"><label for="uEmail">${tr('Correo electrónico','E-Mail Address')}:</label><input id="uEmail" type="email" required value="${esc(u.email)}" /></div>
-              <div class="form-field"><label for="uPager">${tr('Dirección de pager','Pager Address')}:</label><input id="uPager" type="text" value="${esc(u.pager)}" /></div>
-              <div class="form-field"><label for="uPhone">${tr('Teléfono','Phone Number')}:</label><input id="uPhone" type="text" value="${esc(u.phone)}" /></div>
-              <div class="form-field"><label for="uLoc">${tr('Ubicación','Location')}:</label><input id="uLoc" type="text" value="${esc(u.location)}" /></div>
-              <div class="form-field"><label for="uDept">${tr('Departamento','Department')}:</label><select id="uDept">${departments.map(d => `<option value="${esc(d)}" ${u.department===d?'selected':''}>${esc(d)}</option>`).join('')}</select></div>
-              <div class="form-field"><label for="uLang">${tr('Idioma','Language')}:</label><select id="uLang">${langs.map(([v,l]) => `<option value="${v}" ${u.language===v?'selected':''}>${l}</option>`).join('')}</select></div>
-              <div class="form-field"><label>${tr('Agente de soporte','Support Rep')}:</label><div><input id="uSupport" type="checkbox" ${u.isSupport?'checked':''} /> <label for="uSupport">${tr('Habilitar','Enable')}</label></div></div>
-              <div class="form-field"><label for="uAccess">${tr('Nivel de acceso','Access Level')}:</label><select id="uAccess">${accessLevels.map(([v,l]) => `<option value="${v}" ${u.access===v?'selected':''}>${l}</option>`).join('')}</select></div>
-              <div class="form-field"><label for="uPass">${tr('Nueva contraseña','New Password')}:</label><input id="uPass" type="password" /></div>
-              <div style="padding-top:8px"><button type="button" id="userSaveBtn" class="admin-config-btn primary"><span data-lucide="save"></span><span>${tr('Guardar','Save')}</span></button></div>
-              <div style="padding-top:8px; display:flex; gap:8px"><button type="button" id="userChooseLink" class="admin-config-btn"><span data-lucide="arrow-left"></span><span>${tr('Elegir otro usuario','Choose another user')}</span></button></div>
-              <div style="padding-top:12px"><button type="button" id="userDeleteBtn" class="admin-config-btn"><span data-lucide="trash-2"></span><span>${tr('Eliminar cuenta','Delete Account')}</span></button></div>
-            </form>
-          </section>`;
-        }
-        if (state.admaView === 'userAdd') {
-          return `
-          <section class="admin-config" aria-label="Agregar usuario">
-            <header class="admin-config-header"><h2>${tr('Agregar usuarios','Add New Users')}</h2><div class="admin-config-actions"><button type="button" class="admin-config-btn" data-action="back-users"><span data-lucide="arrow-left"></span><span>${tr('Volver','Back')}</span></button></div></header>
-            <form id="userAddForm" class="admin-form" novalidate>
-              <div class="form-field"><label for="nUser">${tr('Usuario','User Name')}:</label><input id="nUser" type="text" required /></div>
-              <div class="form-field"><label for="nFirst">${tr('Nombre','First Name')}:</label><input id="nFirst" type="text" required /></div>
-              <div class="form-field"><label for="nLast">${tr('Apellido','Last Name')}:</label><input id="nLast" type="text" required /></div>
-              <div class="form-field"><label for="nEmail">${tr('Correo electrónico','E-Mail Address')}:</label><input id="nEmail" type="email" required /></div>
-              <div class="form-field"><label for="nPager">${tr('Dirección de pager','Pager Address')}:</label><input id="nPager" type="text" /></div>
-              <div class="form-field"><label for="nPhone">${tr('Teléfono','Phone Number')}:</label><input id="nPhone" type="text" /></div>
-              <div class="form-field"><label for="nLoc">${tr('Ubicación','Location')}:</label><input id="nLoc" type="text" /></div>
-              <div class="form-field"><label for="nDept">${tr('Departamento','Department')}:</label><select id="nDept">${departments.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}</select></div>
-              <div class="form-field"><label for="nLang">${tr('Idioma','Language')}:</label><select id="nLang">${langs.map(([v,l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>
-              <div class="form-field"><label>${tr('Agente de soporte','Support Rep')}:</label><div><input id="nSupport" type="checkbox" /> <label for="nSupport">${tr('Habilitar','Enable')}</label></div></div>
-              <div class="form-field"><label for="nAccess">${tr('Nivel de acceso','Access Level')}:</label><select id="nAccess">${accessLevels.map(([v,l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>
-              <div class="form-field"><label for="nPass">${tr('Nueva contraseña','New Password')}:</label><input id="nPass" type="password" required /></div>
-              <div style="padding-top:8px"><button type="button" id="userCreateBtn" class="admin-config-btn primary"><span data-lucide="save"></span><span>${tr('Guardar','Save')}</span></button></div>
-              
-            </form>
-          </section>`;
-        }
+      } else if (state.admaView === 'usersList') {
+        const tpl = getTemplateHTML('adma-users-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Administrar usuarios','Manage Users')}</h2></section>`;
+      } else if (state.admaView === 'userEdit') {
+        const tpl = getTemplateHTML('adma-user-edit-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Actualizar Información','Update Information')}</h2></section>`;
+      } else if (state.admaView === 'userCreate') {
+        const tpl = getTemplateHTML('adma-user-create-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Agregar usuarios nuevos','Add New Users')}</h2></section>`;
+      } else if (state.admaView === 'departmentsList') {
+        const tpl = getTemplateHTML('adma-departments-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Departamentos','Departments')}</h2></section>`;
+      } else if (state.admaView === 'departmentEdit') {
+        const tpl = getTemplateHTML('adma-department-edit-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Editar departamento','Edit Department')}</h2></section>`;
+      } else if (state.admaView === 'departmentCreate') {
+        const tpl = getTemplateHTML('adma-department-create-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Agregar departamento','Add Department')}</h2></section>`;
+      } else if (state.admaView === 'prioritiesList') {
+        const tpl = getTemplateHTML('adma-priorities-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Prioridades','Priorities')}</h2></section>`;
+      } else if (state.admaView === 'priorityEdit') {
+        const tpl = getTemplateHTML('adma-priority-edit-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Editar prioridad','Edit Priority')}</h2></section>`;
+      } else if (state.admaView === 'priorityCreate') {
+        const tpl = getTemplateHTML('adma-priority-create-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Agregar prioridad','Add Priority')}</h2></section>`;
+      } else if (state.admaView === 'statesList') {
+        const tpl = getTemplateHTML('adma-states-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Estados','States')}</h2></section>`;
+      } else if (state.admaView === 'stateEdit') {
+        const tpl = getTemplateHTML('adma-state-edit-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Editar estado','Edit State')}</h2></section>`;
+      } else if (state.admaView === 'stateCreate') {
+        const tpl = getTemplateHTML('adma-state-create-template');
+        if (tpl) return tpl;
+        return `<section class="admin-config"><h2>${tr('Agregar estado','Add State')}</h2></section>`;
       } else if (state.admaView === 'categories' || state.admaView === 'categoryEdit' || state.admaView === 'categoryAdd') {
         const CATEGORIES_KEY = 'socya:categories';
         const USERS_KEY = 'socya:users';
@@ -1282,150 +1447,6 @@ const render = () => {
             </form>
           </section>`;
         }
-=======
-      } else if (state.admaView === 'usersList') {
-        const listTpl = getTemplateHTML('adma-users-template');
-        if (listTpl) return listTpl;
-        return `<section class="admin-config"><h2>Administrar usuarios</h2></section>`;
-      } else if (state.admaView === 'userEdit') {
-        const editTpl = getTemplateHTML('adma-user-edit-template');
-        if (editTpl) return editTpl;
-        return `<section class="admin-config"><h2>Actualizar información</h2></section>`;
-      } else if (state.admaView === 'userCreate') {
-        const createTpl = getTemplateHTML('adma-user-create-template');
-        if (createTpl) return createTpl;
-        return `<section class="admin-config"><h2>Agregar usuarios nuevos</h2></section>`;
-      } else if (state.admaView === 'categoriesList') {
-        loadCategories();
-        loadUsers();
-        const backBtn = document.querySelector('.admin-config [data-action="back"]');
-        const addBtn = document.querySelector('.admin-config [data-action="add-category"]');
-        const search = document.getElementById('categoriesSearch');
-        const tbody = document.getElementById('categoriesTableBody');
-        const renderRows = () => {
-          const q = (state.categoriesQuery || '').toLowerCase().trim();
-          const filtered = q
-            ? state.categories.filter(c => {
-                const s = [c.name, c.representative].join(' ').toLowerCase();
-                return s.includes(q);
-              })
-            : state.categories;
-          if (tbody) {
-            tbody.innerHTML = filtered.map(c => `
-              <tr data-id="${c.id}">
-                <td>${c.name}</td>
-                <td>${c.representative || '—'}</td>
-                <td>
-                  <div class="row-actions">
-                    <button type="button" class="admin-config-btn" data-action="edit" data-id="${c.id}"><span data-lucide="pencil"></span><span>Editar</span></button>
-                    <button type="button" class="admin-config-btn" data-action="delete" data-id="${c.id}"><span data-lucide="trash-2"></span><span>Borrar</span></button>
-                  </div>
-                </td>
-              </tr>
-            `).join('');
-          }
-        };
-        if (tbody && !tbody.dataset.bound) {
-          renderRows();
-          tbody.addEventListener('click', (e) => {
-            const btn = e.target.closest('button.admin-config-btn');
-            if (!btn) return;
-            const id = Number(btn.dataset.id);
-            if (btn.dataset.action === 'edit') { state.selectedCategoryId = id; state.admaView = 'categoryEdit'; render(); return; }
-            if (btn.dataset.action === 'delete') {
-              state.categories = state.categories.filter(x => x.id !== id);
-              saveCategories();
-              showNotice(tr('Categoría eliminada','Category deleted'),'success');
-              renderRows();
-            }
-          });
-          tbody.dataset.bound = '1';
-        }
-        if (search && !search.dataset.bound) {
-          search.addEventListener('input', () => { state.categoriesQuery = search.value || ''; renderRows(); });
-          search.dataset.bound = '1';
-        }
-        if (addBtn && !addBtn.dataset.bound) {
-          addBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'categoryCreate'; render(); });
-          addBtn.dataset.bound = '1';
-        }
-        if (backBtn && !backBtn.dataset.bound) {
-          backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); });
-          backBtn.dataset.bound = '1';
-        }
-        renderIcons();
-      } else if (state.admaView === 'categoryEdit') {
-        loadCategories();
-        loadUsers();
-        const backBtn = document.querySelector('.admin-config [data-action="back"]');
-        const saveBtn = document.querySelector('.admin-config [data-action="save-category"]');
-        const delBtn = document.querySelector('.admin-config [data-action="delete-category"]');
-        const c = state.categories.find(x => x.id === state.selectedCategoryId);
-        if (!c) { state.admaView = 'categoriesList'; render(); return; }
-        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-        setVal('catName', c.name);
-        setVal('catRep', c.representative || '');
-        const dl = document.getElementById('catRepList');
-        if (dl) dl.innerHTML = state.users.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
-        if (backBtn && !backBtn.dataset.bound) {
-          backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'categoriesList'; render(); });
-          backBtn.dataset.bound = '1';
-        }
-        if (saveBtn && !saveBtn.dataset.bound) {
-          saveBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const name = (document.getElementById('catName')?.value || '').trim();
-            if (!name) { showNotice(tr('Ingrese el nombre','Enter the name'),'error'); return; }
-            const representative = (document.getElementById('catRep')?.value || '').trim();
-            state.categories = state.categories.map(x => x.id === c.id ? { ...x, name, representative } : x);
-            saveCategories();
-            showNotice(tr('Categoría actualizada','Category updated'),'success');
-            state.admaView = 'categoriesList';
-            render();
-          });
-          saveBtn.dataset.bound = '1';
-        }
-        if (delBtn && !delBtn.dataset.bound) {
-          delBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            state.categories = state.categories.filter(x => x.id !== c.id);
-            saveCategories();
-            showNotice(tr('Categoría eliminada','Category deleted'),'success');
-            state.selectedCategoryId = null;
-            state.admaView = 'categoriesList';
-            render();
-          });
-          delBtn.dataset.bound = '1';
-        }
-        renderIcons();
-      } else if (state.admaView === 'categoryCreate') {
-        loadCategories();
-        loadUsers();
-        const backBtn = document.querySelector('.admin-config [data-action="back"]');
-        const saveBtn = document.querySelector('.admin-config [data-action="create-category"]');
-        const dl = document.getElementById('catRepList');
-        if (dl) dl.innerHTML = state.users.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
-        if (backBtn && !backBtn.dataset.bound) {
-          backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'categoriesList'; render(); });
-          backBtn.dataset.bound = '1';
-        }
-        if (saveBtn && !saveBtn.dataset.bound) {
-          saveBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const name = (document.getElementById('newCatName')?.value || '').trim();
-            if (!name) { showNotice(tr('Ingrese el nombre','Enter the name'),'error'); return; }
-            const representative = (document.getElementById('newCatRep')?.value || '').trim();
-            const nextId = (state.categories.reduce((m, x) => Math.max(m, x.id), 0) + 1) || 1;
-            state.categories.push({ id: nextId, name, representative });
-            saveCategories();
-            showNotice(tr('Categoría creada','Category created'),'success');
-            state.admaView = 'categoriesList';
-            render();
-          });
-          saveBtn.dataset.bound = '1';
-        }
-        renderIcons();
->>>>>>> 1e6cfb459a8a78bb8d76ac8826444e672491690f
       } else {
         const tpl = getTemplateHTML('adma-template');
         if (tpl) return tpl;
@@ -1433,6 +1454,7 @@ const render = () => {
       }
     }
     if (state.activePage === 'planning') {
+      loadPriorities();
       const tpl = getTemplateHTML('planning-template');
       if (tpl) return tpl;
       return `<div class="planning-layout"><div class="calendar-section">${renderCalendar()}</div><div class="tasks-section">${renderTaskList()}</div></div>`;
@@ -1559,11 +1581,8 @@ const render = () => {
             maxImageSize: val('cfgMaxImage'),
           };
           try { localStorage.setItem('socya:siteConfig', JSON.stringify(state.siteConfig)); } catch(_) {}
-<<<<<<< HEAD
           showSuccessAlert(tr('Configuración guardada','Settings saved'));
-=======
-          showNotice(tr('Configuración guardada','Settings saved'),'success');
->>>>>>> 1e6cfb459a8a78bb8d76ac8826444e672491690f
+          
         });
         saveBtn.dataset.bound = '1';
       }
@@ -1582,26 +1601,17 @@ const render = () => {
           const next = (document.getElementById('adminPassNew')?.value || '').trim();
           const conf = (document.getElementById('adminPassConfirm')?.value || '').trim();
           const expected = loadAdminPass();
-<<<<<<< HEAD
           if (cur !== expected) { showErrorAlert(tr('Contraseña actual incorrecta','Current password incorrect')); return; }
           if (!next || next.length < 4) { showErrorAlert(tr('La nueva contraseña es muy corta','New password too short')); return; }
           if (next !== conf) { showErrorAlert(tr('Las contraseñas no coinciden','Passwords do not match')); return; }
           saveAdminPass(next);
           showSuccessAlert(tr('Contraseña actualizada','Password updated'));
-=======
-          if (cur !== expected) { showNotice(tr('Contraseña actual incorrecta','Current password incorrect'),'error'); return; }
-          if (!next || next.length < 4) { showNotice(tr('La nueva contraseña es muy corta','New password too short'),'error'); return; }
-          if (next !== conf) { showNotice(tr('Las contraseñas no coinciden','Passwords do not match'),'error'); return; }
-          saveAdminPass(next);
-          showNotice(tr('Contraseña actualizada','Password updated'),'success');
->>>>>>> 1e6cfb459a8a78bb8d76ac8826444e672491690f
           state.admaView = null;
           render();
         });
         saveBtn.dataset.bound = '1';
       }
       renderIcons();
-<<<<<<< HEAD
     } else if (state.admaView === 'mail') {
       const sel = document.getElementById('mailMessageSel');
       const edit = document.getElementById('mailEditBtn');
@@ -1636,69 +1646,6 @@ const render = () => {
       if (backToMail && !backToMail.dataset.bound) { backToMail.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'mail'; render(); }); backToMail.dataset.bound = '1'; }
       if (admin && !admin.dataset.bound) { admin.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); }); admin.dataset.bound = '1'; }
       renderIcons();
-    } else if (state.admaView === 'users') {
-      const USERS_KEY = 'socya:users';
-      const loadUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw) return (JSON.parse(raw)||[]); } catch(_) {} return []; };
-      const users = loadUsers();
-      const back = document.querySelector('.admin-config [data-action="back"]');
-      const list = document.getElementById('userList');
-      const edit = document.getElementById('editUserBtn');
-      const add = document.getElementById('addUserLink');
-      if (back && !back.dataset.bound) { back.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); }); back.dataset.bound = '1'; }
-      if (list && !list.dataset.bound) { list.addEventListener('change', () => { state.selectedUserId = Number(list.value); }); list.dataset.bound = '1'; }
-      if (edit && !edit.dataset.bound) { edit.addEventListener('click', () => { state.selectedUserId = Number((list?.value)||state.selectedUserId||users[0]?.id||0); state.admaView = 'userEdit'; render(); }); edit.dataset.bound = '1'; }
-      if (add && !add.dataset.bound) { add.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'userAdd'; render(); }); add.dataset.bound = '1'; }
-      renderIcons();
-    } else if (state.admaView === 'userEdit') {
-      const USERS_KEY = 'socya:users';
-      const loadUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw) return (JSON.parse(raw)||[]); } catch(_) {} return []; };
-      const saveUsers = (arr) => { try { localStorage.setItem(USERS_KEY, JSON.stringify(arr||[])); } catch(_) {} };
-      const users = loadUsers();
-      const id = state.selectedUserId || users[0]?.id || 0;
-      const back = document.querySelector('.admin-config [data-action="back-users"]');
-      const first = document.getElementById('uFirst');
-      const last = document.getElementById('uLast');
-      const email = document.getElementById('uEmail');
-      const pager = document.getElementById('uPager');
-      const phone = document.getElementById('uPhone');
-      const loc = document.getElementById('uLoc');
-      const dept = document.getElementById('uDept');
-      const lang = document.getElementById('uLang');
-      const support = document.getElementById('uSupport');
-      const access = document.getElementById('uAccess');
-      const pass = document.getElementById('uPass');
-      const save = document.getElementById('userSaveBtn');
-      const del = document.getElementById('userDeleteBtn');
-      const choose = document.getElementById('userChooseLink');
-      
-      if (back && !back.dataset.bound) { back.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'users'; render(); }); back.dataset.bound = '1'; }
-      if (save && !save.dataset.bound) { save.addEventListener('click', () => { const arr = users.map(u => (u.id===id ? { ...u, firstName: String(first?.value||''), lastName: String(last?.value||''), email: String(email?.value||''), pager: String(pager?.value||''), phone: String(phone?.value||''), location: String(loc?.value||''), department: String(dept?.value||''), language: String(lang?.value||'es'), isSupport: !!(support&&support.checked), access: String(access?.value||'normal'), password: String(pass?.value||'') || u.password } : u)); saveUsers(arr); showSuccessAlert(tr('Usuario actualizado','User updated')); }); save.dataset.bound = '1'; }
-      if (del && !del.dataset.bound) { del.addEventListener('click', () => { const arr = users.filter(u => u.id !== id); saveUsers(arr); showSuccessAlert(tr('Cuenta eliminada','Account deleted')); state.admaView = 'users'; render(); }); del.dataset.bound = '1'; }
-      if (choose && !choose.dataset.bound) { choose.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'users'; render(); }); choose.dataset.bound = '1'; }
-      renderIcons();
-    } else if (state.admaView === 'userAdd') {
-      const USERS_KEY = 'socya:users';
-      const loadUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw) return (JSON.parse(raw)||[]); } catch(_) {} return []; };
-      const saveUsers = (arr) => { try { localStorage.setItem(USERS_KEY, JSON.stringify(arr||[])); } catch(_) {} };
-      const users = loadUsers();
-      const back = document.querySelector('.admin-config [data-action="back-users"]');
-      const user = document.getElementById('nUser');
-      const first = document.getElementById('nFirst');
-      const last = document.getElementById('nLast');
-      const email = document.getElementById('nEmail');
-      const pager = document.getElementById('nPager');
-      const phone = document.getElementById('nPhone');
-      const loc = document.getElementById('nLoc');
-      const dept = document.getElementById('nDept');
-      const lang = document.getElementById('nLang');
-      const support = document.getElementById('nSupport');
-      const access = document.getElementById('nAccess');
-      const pass = document.getElementById('nPass');
-      const create = document.getElementById('userCreateBtn');
-      
-      if (back && !back.dataset.bound) { back.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'users'; render(); }); back.dataset.bound = '1'; }
-      if (create && !create.dataset.bound) { create.addEventListener('click', () => { const nextId = (users.reduce((max,u)=>Math.max(max,u.id),0) + 1) || 1; const u = { id: nextId, username: String(user?.value||'').trim(), firstName: String(first?.value||''), lastName: String(last?.value||''), email: String(email?.value||''), pager: String(pager?.value||''), phone: String(phone?.value||''), location: String(loc?.value||''), department: String(dept?.value||''), language: String(lang?.value||'es'), isSupport: !!(support&&support.checked), access: String(access?.value||'normal'), password: String(pass?.value||'') }; const arr = [...users, u]; saveUsers(arr); showSuccessAlert(tr('Usuario creado','User created')); state.selectedUserId = u.id; state.admaView = 'users'; render(); }); create.dataset.bound = '1'; }
-      renderIcons();
     } else if (state.admaView === 'categories') {
       const back = document.querySelector('.admin-config [data-action="back"]');
       const add = document.getElementById('addCategoryBtn');
@@ -1722,11 +1669,9 @@ const render = () => {
       const loadCats = () => { try { const raw = localStorage.getItem(CATEGORIES_KEY); if (raw) return (JSON.parse(raw)||[]); } catch(_) {} return []; };
       if (back && !back.dataset.bound) { back.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'categories'; render(); }); back.dataset.bound = '1'; }
       if (save && !save.dataset.bound) { save.addEventListener('click', () => { const cats = loadCats(); const id = state.selectedCategoryId || 0; const nextId = id || ((cats.reduce((max,c)=>Math.max(max,c.id),0) + 1) || 1); const obj = { id: nextId, name: String(name?.value||''), rep: String(rep?.value||'') }; const arr = cats.some(c => c.id === nextId) ? cats.map(c => (c.id===nextId?obj:c)) : [...cats, obj]; const msg = id ? tr('Categoría modificada','Category updated') : tr('Categoría creada','Category created'); try { localStorage.setItem(CATEGORIES_KEY, JSON.stringify(arr||[])); showSuccessAlert(msg); } catch(_) {} state.admaView = 'categories'; render(); }); save.dataset.bound = '1'; }
-=======
     } else if (state.admaView === 'usersList') {
       loadUsers();
       const list = document.getElementById('usersList');
-      const editBtn = document.querySelector('.admin-config [data-action="edit-user"]');
       const addBtn = document.querySelector('.admin-config [data-action="add-user"]');
       const backBtn = document.querySelector('.admin-config [data-action="back"]');
       const search = document.getElementById('usersSearch');
@@ -1740,7 +1685,12 @@ const render = () => {
           : state.users;
         if (list) {
           const prev = state.selectedUserId;
-          list.innerHTML = filtered.map(u => `<div class="custom-option ${prev===u.id?'selected':''}" role="option" data-id="${u.id}" tabindex="-1">${u.username} (${[u.firstName, u.lastName].filter(Boolean).join(' ')})</div>`).join('');
+          list.innerHTML = filtered.map(u => `
+            <div class="custom-option ${prev===u.id?'selected':''}" role="option" data-id="${u.id}" tabindex="-1">
+              ${u.username} (${[u.firstName, u.lastName].filter(Boolean).join(' ')})
+              <span class="hover-edit" aria-hidden="true"><span data-lucide="pencil"></span></span>
+            </div>
+          `).join('');
         }
       };
       if (list) {
@@ -1750,7 +1700,14 @@ const render = () => {
           if (!item) return;
           const id = Number(item.dataset.id);
           state.selectedUserId = id || null;
+          if (ev.target.closest('.hover-edit')) { state.admaView = 'userEdit'; render(); return; }
           list.querySelectorAll('.custom-option').forEach(el => el.classList.toggle('selected', Number(el.dataset.id) === state.selectedUserId));
+        });
+        list.addEventListener('dblclick', (ev) => {
+          const item = ev.target.closest('.custom-option');
+          if (!item) return;
+          state.selectedUserId = Number(item.dataset.id) || null;
+          if (state.selectedUserId) { state.admaView = 'userEdit'; render(); }
         });
         list.addEventListener('keydown', (ev) => {
           const items = Array.from(list.querySelectorAll('.custom-option'));
@@ -1766,17 +1723,13 @@ const render = () => {
             if (prev) { state.selectedUserId = Number(prev.dataset.id); items.forEach(el => el.classList.toggle('selected', el === prev)); prev.scrollIntoView({ block: 'nearest' }); }
           } else if (ev.key === 'Enter') {
             ev.preventDefault();
-            if (state.selectedUserId) { editBtn?.click(); }
+            if (state.selectedUserId) { state.admaView = 'userEdit'; render(); }
           }
         });
       }
       if (search && !search.dataset.bound) {
-        search.addEventListener('input', () => { state.usersQuery = search.value || ''; renderList(); });
+        search.addEventListener('input', () => { state.usersQuery = search.value || ''; renderList(); renderIcons(); });
         search.dataset.bound = '1';
-      }
-      if (editBtn && !editBtn.dataset.bound) {
-        editBtn.addEventListener('click', (e) => { e.preventDefault(); if (!state.selectedUserId) { showNotice(tr('Seleccione un usuario','Select a user'),'error'); return; } state.admaView = 'userEdit'; render(); });
-        editBtn.dataset.bound = '1';
       }
       if (addBtn && !addBtn.dataset.bound) {
         addBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'userCreate'; render(); });
@@ -1825,7 +1778,7 @@ const render = () => {
           };
           state.users = state.users.map(x => x.id === u.id ? { ...x, ...updated } : x);
           saveUsers();
-          showNotice(tr('Usuario actualizado','User updated'),'success');
+          showSuccessAlert(tr('Usuario actualizado','User updated'));
           state.admaView = 'usersList';
           render();
         });
@@ -1836,7 +1789,7 @@ const render = () => {
           e.preventDefault();
           state.users = state.users.filter(x => x.id !== u.id);
           saveUsers();
-          showNotice(tr('Cuenta eliminada','Account deleted'),'success');
+          showSuccessAlert(tr('Cuenta eliminada','Account deleted'));
           state.selectedUserId = null;
           state.admaView = 'usersList';
           render();
@@ -1861,7 +1814,7 @@ const render = () => {
           const firstName = (document.getElementById('newUserFirstName')?.value || '').trim();
           const lastName = (document.getElementById('newUserLastName')?.value || '').trim();
           const email = (document.getElementById('newUserEmail')?.value || '').trim();
-          if (!username || !firstName || !lastName || !email) { showNotice(tr('Complete los campos requeridos','Fill required fields'),'error'); return; }
+          if (!username || !firstName || !lastName || !email) { showErrorAlert(tr('Complete los campos requeridos','Fill required fields')); return; }
           const phone = (document.getElementById('newUserPhone')?.value || '').trim();
           const location = (document.getElementById('newUserLocation')?.value || '').trim();
           const orgDept = (document.getElementById('newUserDept')?.value || '').trim();
@@ -1871,13 +1824,380 @@ const render = () => {
           const nextId = (state.users.reduce((m, x) => Math.max(m, x.id), 0) + 1) || 1;
           state.users.push({ id: nextId, username, firstName, lastName, email, phone, location, orgDept, language, supportRep, accessLevel });
           saveUsers();
-          showNotice(tr('Usuario creado','User created'),'success');
+          showSuccessAlert(tr('Usuario creado','User created'));
           state.admaView = 'usersList';
           render();
         });
         saveBtn.dataset.bound = '1';
       }
->>>>>>> 1e6cfb459a8a78bb8d76ac8826444e672491690f
+      renderIcons();
+    } else if (state.admaView === 'departmentsList') {
+      loadDepartments();
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const addBtn = document.querySelector('.admin-config [data-action="add-department"]');
+      const search = document.getElementById('departmentsSearch');
+      const tbody = document.getElementById('departmentsTableBody');
+      const renderTable = () => {
+        const q = (search?.value || '').toLowerCase().trim();
+        const filtered = q ? (state.departments||[]).filter(d => String(d.name||'').toLowerCase().includes(q)) : (state.departments||[]);
+        if (tbody) {
+          tbody.innerHTML = filtered.map(d => `
+            <tr>
+              <td class="positioned">
+                ${String(d.name||'')}
+                <span class="hover-actions" aria-hidden="true">
+                  <span class="icon-btn" data-action="edit-dept" data-id="${d.id}" title="${tr('Editar','Edit')}"><span data-lucide="pencil"></span></span>
+                  <span class="icon-btn danger" data-action="delete-dept" data-id="${d.id}" title="${tr('Borrar','Delete')}"><span data-lucide="trash-2"></span></span>
+                </span>
+              </td>
+            </tr>
+          `).join('');
+        }
+      };
+      if (backBtn && !backBtn.dataset.bound) { backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); }); backBtn.dataset.bound = '1'; }
+      if (addBtn && !addBtn.dataset.bound) { addBtn.addEventListener('click', (e) => { e.preventDefault(); state.selectedDepartmentId = 0; state.admaView = 'departmentCreate'; render(); }); addBtn.dataset.bound = '1'; }
+      if (search && !search.dataset.bound) { search.addEventListener('input', () => { renderTable(); renderIcons(); }); search.dataset.bound = '1'; }
+      if (tbody && !tbody.dataset.bound) {
+        tbody.addEventListener('click', (e) => {
+          const edit = e.target.closest('[data-action="edit-dept"]');
+          const del = e.target.closest('[data-action="delete-dept"]');
+          if (edit) { state.selectedDepartmentId = Number(edit.dataset.id||0); state.admaView = 'departmentEdit'; render(); return; }
+          if (del) {
+            const id = Number(del.dataset.id||0);
+            state.departments = (state.departments||[]).filter(x => x.id !== id);
+            saveDepartments();
+            showSuccessAlert(tr('Departamento eliminado','Department deleted'));
+            renderTable();
+            renderIcons();
+            return;
+          }
+        });
+        tbody.dataset.bound = '1';
+      }
+      renderTable();
+      renderIcons();
+    } else if (state.admaView === 'departmentEdit') {
+      loadDepartments();
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const saveBtn = document.querySelector('.admin-config [data-action="save-department"]');
+      const delBtn = document.querySelector('.admin-config [data-action="delete-department"]');
+      const d = (state.departments||[]).find(x => x.id === state.selectedDepartmentId);
+      if (!d) { state.admaView = 'departmentsList'; render(); return; }
+      const nameEl = document.getElementById('deptName'); if (nameEl) nameEl.value = d.name || '';
+      if (backBtn && !backBtn.dataset.bound) { backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'departmentsList'; render(); }); backBtn.dataset.bound = '1'; }
+      if (saveBtn && !saveBtn.dataset.bound) {
+        saveBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const name = (document.getElementById('deptName')?.value || '').trim();
+          state.departments = (state.departments||[]).map(x => x.id === d.id ? { ...x, name } : x);
+          saveDepartments();
+          showSuccessAlert(tr('Departamento actualizado','Department updated'));
+          state.admaView = 'departmentsList';
+          render();
+        });
+        saveBtn.dataset.bound = '1';
+      }
+      if (delBtn && !delBtn.dataset.bound) {
+        delBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          state.departments = (state.departments||[]).filter(x => x.id !== d.id);
+          saveDepartments();
+          showSuccessAlert(tr('Departamento eliminado','Department deleted'));
+          state.selectedDepartmentId = null;
+          state.admaView = 'departmentsList';
+          render();
+        });
+        delBtn.dataset.bound = '1';
+      }
+      renderIcons();
+    } else if (state.admaView === 'departmentCreate') {
+      loadDepartments();
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const saveBtn = document.querySelector('.admin-config [data-action="create-department"]');
+      if (backBtn && !backBtn.dataset.bound) { backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'departmentsList'; render(); }); backBtn.dataset.bound = '1'; }
+      if (saveBtn && !saveBtn.dataset.bound) {
+        saveBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const name = (document.getElementById('newDeptName')?.value || '').trim();
+          if (!name) { showErrorAlert(tr('Complete los campos requeridos','Fill required fields')); return; }
+          const nextId = ((state.departments||[]).reduce((m, x) => Math.max(m, x.id), 0) + 1) || 1;
+          state.departments = [ ...(state.departments||[]), { id: nextId, name } ];
+          saveDepartments();
+          showSuccessAlert(tr('Departamento creado','Department created'));
+          state.admaView = 'departmentsList';
+          render();
+        });
+        saveBtn.dataset.bound = '1';
+      }
+      renderIcons();
+    } else if (state.admaView === 'prioritiesList') {
+      loadPriorities();
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const addBtn = document.querySelector('.admin-config [data-action="add-priority"]');
+      const search = document.getElementById('prioritiesSearch');
+      const tbody = document.getElementById('prioritiesTableBody');
+      const badge = (p) => p && p.color
+        ? `<span class="status-badge" style="background-color:${p.color}">${String(p.name||'')}</span>`
+        : `<span class="status-badge ${p.style||'status-recent'}">${String(p.name||'')}</span>`;
+      const renderTable = () => {
+        const q = (search?.value || '').toLowerCase().trim();
+        const filtered = q ? (state.priorities||[]).filter(p => [p.name, p.style, p.color].map(String).join(' ').toLowerCase().includes(q)) : (state.priorities||[]);
+        if (tbody) {
+          tbody.innerHTML = filtered.map(p => `
+            <tr>
+              <td style="width:72px">${p.id}</td>
+              <td class="positioned">
+                ${badge(p)}
+                <span class="hover-actions" aria-hidden="true">
+                  <span class="icon-btn" data-action="edit-priority" data-id="${p.id}" title="${tr('Editar','Edit')}"><span data-lucide="pencil"></span></span>
+                  <span class="icon-btn danger" data-action="delete-priority" data-id="${p.id}" title="${tr('Borrar','Delete')}"><span data-lucide="trash-2"></span></span>
+                </span>
+              </td>
+            </tr>
+          `).join('');
+        }
+      };
+      if (backBtn && !backBtn.dataset.bound) { backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); }); backBtn.dataset.bound = '1'; }
+      if (addBtn && !addBtn.dataset.bound) { addBtn.addEventListener('click', (e) => { e.preventDefault(); state.selectedPriorityId = 0; state.admaView = 'priorityCreate'; render(); }); addBtn.dataset.bound = '1'; }
+      if (search && !search.dataset.bound) { search.addEventListener('input', () => { renderTable(); renderIcons(); }); search.dataset.bound = '1'; }
+      if (tbody && !tbody.dataset.bound) {
+        tbody.addEventListener('click', (e) => {
+          const edit = e.target.closest('[data-action="edit-priority"]');
+          const del = e.target.closest('[data-action="delete-priority"]');
+          if (edit) { state.selectedPriorityId = Number(edit.dataset.id||0); state.admaView = 'priorityEdit'; render(); return; }
+          if (del) {
+            const id = Number(del.dataset.id||0);
+            state.priorities = (state.priorities||[]).filter(x => x.id !== id);
+            savePriorities();
+            showSuccessAlert(tr('Prioridad eliminada','Priority deleted'));
+            renderTable();
+            renderIcons();
+            return;
+          }
+        });
+        tbody.dataset.bound = '1';
+      }
+      renderTable();
+      renderIcons();
+    } else if (state.admaView === 'priorityEdit') {
+      loadPriorities();
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const saveBtn = document.querySelector('.admin-config [data-action="save-priority"]');
+      const delBtn = document.querySelector('.admin-config [data-action="delete-priority"]');
+      const p = (state.priorities||[]).find(x => x.id === state.selectedPriorityId);
+      if (!p) { state.admaView = 'prioritiesList'; render(); return; }
+      const nameEl = document.getElementById('priorityName'); if (nameEl) nameEl.value = p.name || '';
+      const colorEl = document.getElementById('priorityColor');
+      const rEl = null, gEl = null, bEl = null;
+      const ensureHex = (hex) => {
+        const h = String(hex||'').trim();
+        if (/^#?[0-9a-fA-F]{6}$/.test(h)) return h.startsWith('#') ? h : ('#'+h);
+        return '#5B8DEF';
+      };
+      const readBadgeHex = (cls) => {
+        const el = document.createElement('span');
+        el.className = 'status-badge '+String(cls||'status-recent');
+        el.style.position = 'fixed'; el.style.left = '-10000px'; el.style.top = '-10000px';
+        document.body.appendChild(el);
+        const c = window.getComputedStyle(el).backgroundColor || 'rgb(91,141,239)';
+        try { el.remove(); } catch(_) {}
+        const m = c.match(/rgb\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)/i);
+        if (m) return rgbToHex({ r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) });
+        return '#5B8DEF';
+      };
+      const initHex = ensureHex(p.color || readBadgeHex(p.style));
+      if (colorEl) colorEl.value = initHex;
+      if (colorEl && !colorEl.dataset.boundUnique) {
+        const used = new Set((state.priorities||[]) 
+          .filter(x => x.id !== p.id)
+          .map(x => String((x.color && ensureHex(x.color)) || readBadgeHex(x.style)).toLowerCase()));
+        colorEl.dataset.prev = colorEl.value;
+        colorEl.addEventListener('input', () => {
+          const hex = ensureHex(colorEl.value).toLowerCase();
+          if (used.has(hex)) {
+            showErrorAlert(tr('Color ya en uso','Color already used'));
+            colorEl.value = colorEl.dataset.prev || '#5B8DEF';
+            return;
+          }
+          colorEl.dataset.prev = colorEl.value;
+        });
+        colorEl.dataset.boundUnique = '1';
+      }
+      try { const field = colorEl?.closest('.form-field'); field?.querySelectorAll('.color-picker-pop').forEach(el => el.remove()); } catch(_) {}
+      
+      if (backBtn && !backBtn.dataset.bound) { backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'prioritiesList'; render(); }); backBtn.dataset.bound = '1'; }
+      if (saveBtn && !saveBtn.dataset.bound) {
+        saveBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const name = (document.getElementById('priorityName')?.value || '').trim();
+          const color = ensureHex(document.getElementById('priorityColor')?.value || '#5B8DEF');
+          const readHex = (x) => String(x.color || readBadgeHex(x.style)).toLowerCase();
+          const dup = (state.priorities||[]).some(x => x.id !== p.id && readHex(x) === color.toLowerCase());
+          if (dup) { showErrorAlert(tr('Color ya en uso','Color already used')); return; }
+          state.priorities = (state.priorities||[]).map(x => x.id === p.id ? { ...x, name, color } : x);
+          savePriorities();
+          showSuccessAlert(tr('Prioridad actualizada','Priority updated'));
+          state.admaView = 'prioritiesList';
+          render();
+        });
+        saveBtn.dataset.bound = '1';
+      }
+      if (delBtn && !delBtn.dataset.bound) {
+        delBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          state.priorities = (state.priorities||[]).filter(x => x.id !== p.id);
+          savePriorities();
+          showSuccessAlert(tr('Prioridad eliminada','Priority deleted'));
+          state.selectedPriorityId = null;
+          state.admaView = 'prioritiesList';
+          render();
+        });
+        delBtn.dataset.bound = '1';
+      }
+      renderIcons();
+    } else if (state.admaView === 'priorityCreate') {
+      loadPriorities();
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const saveBtn = document.querySelector('.admin-config [data-action="create-priority"]');
+      if (backBtn && !backBtn.dataset.bound) { backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'prioritiesList'; render(); }); backBtn.dataset.bound = '1'; }
+      if (saveBtn && !saveBtn.dataset.bound) {
+        saveBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const name = (document.getElementById('newPriorityName')?.value || '').trim();
+          const color = (document.getElementById('newPriorityColor')?.value || '#5B8DEF').trim();
+          if (!name) { showErrorAlert(tr('Complete los campos requeridos','Fill required fields')); return; }
+          const used = new Set((state.priorities||[]).map(x => String((x.color) || readBadgeHex(x.style)).toLowerCase()));
+          if (used.has(String(color||'').toLowerCase())) { showErrorAlert(tr('Color ya en uso','Color already used')); return; }
+          const nextId = ((state.priorities||[]).reduce((m, x) => Math.max(m, x.id), 0) + 1) || 1;
+          state.priorities = [ ...(state.priorities||[]), { id: nextId, name, color } ];
+          savePriorities();
+          showSuccessAlert(tr('Prioridad creada','Priority created'));
+          state.admaView = 'prioritiesList';
+          render();
+        });
+        saveBtn.dataset.bound = '1';
+      }
+      const colorEl = document.getElementById('newPriorityColor');
+      const ensureHex = (hex) => { const h = String(hex||'').trim(); return /^#?[0-9a-fA-F]{6}$/.test(h) ? (h.startsWith('#')?h:'#'+h) : '#5B8DEF'; };
+      const readBadgeHex = (cls) => { const el = document.createElement('span'); el.className = 'status-badge '+String(cls||'status-recent'); el.style.position='fixed'; el.style.left='-10000px'; el.style.top='-10000px'; document.body.appendChild(el); const c = window.getComputedStyle(el).backgroundColor || 'rgb(91,141,239)'; try { el.remove(); } catch(_) {} const m = c.match(/rgb\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)/i); return m ? rgbToHex({ r:Number(m[1]), g:Number(m[2]), b:Number(m[3]) }) : '#5B8DEF'; };
+      if (colorEl && !colorEl.value) colorEl.value = '#5B8DEF';
+      if (colorEl && !colorEl.dataset.boundUnique) {
+        const used = new Set((state.priorities||[])
+          .map(x => String((x.color && ensureHex(x.color)) || readBadgeHex(x.style)).toLowerCase()));
+        colorEl.dataset.prev = colorEl.value;
+        colorEl.addEventListener('input', () => {
+          const hex = ensureHex(colorEl.value).toLowerCase();
+          if (used.has(hex)) {
+            showErrorAlert(tr('Color ya en uso','Color already used'));
+            colorEl.value = colorEl.dataset.prev || '#5B8DEF';
+            return;
+          }
+          colorEl.dataset.prev = colorEl.value;
+        });
+        colorEl.dataset.boundUnique = '1';
+      }
+      try { const field = colorEl?.closest('.form-field'); field?.querySelectorAll('.color-picker-pop').forEach(el => el.remove()); } catch(_) {}
+      
+      renderIcons();
+    } else if (state.admaView === 'statesList') {
+      loadStates();
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const addBtn = document.querySelector('.admin-config [data-action="add-state"]');
+      const tbody = document.getElementById('statesTableBody');
+      const renderTable = () => {
+        if (tbody) {
+          tbody.innerHTML = (state.states||[]).map(s => `
+            <tr>
+              <td style="width:72px">${s.id}</td>
+              <td class="positioned">
+                ${String(s.name||'')}
+                ${s.closed ? `<span class=\"status-badge status-solved\" style=\"margin-left:8px\">${tr('Cerrado','Closed')}</span>` : ''}
+              </td>
+              <td>
+                <button type="button" class="admin-config-btn" data-action="edit-state" data-id="${s.id}"><span data-lucide="square-pen"></span><span>${tr('Editar','Edit')}</span></button>
+                <button type="button" class="admin-config-btn" data-action="delete-state" data-id="${s.id}"><span data-lucide="trash-2"></span><span>${tr('Eliminar','Delete')}</span></button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      };
+      if (backBtn && !backBtn.dataset.bound) { backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = null; render(); }); backBtn.dataset.bound = '1'; }
+      if (addBtn && !addBtn.dataset.bound) { addBtn.addEventListener('click', (e) => { e.preventDefault(); state.selectedStateId = 0; state.admaView = 'stateCreate'; render(); }); addBtn.dataset.bound = '1'; }
+      if (tbody && !tbody.dataset.bound) {
+        tbody.addEventListener('click', (e) => {
+          const edit = e.target.closest('[data-action="edit-state"]');
+          const del = e.target.closest('[data-action="delete-state"]');
+          if (edit) { state.selectedStateId = Number(edit.dataset.id||0); state.admaView = 'stateEdit'; render(); return; }
+          if (del) {
+            const id = Number(del.dataset.id||0);
+            state.states = (state.states||[]).filter(x => x.id !== id);
+            saveStates();
+            showSuccessAlert(tr('Estado eliminado','State deleted'));
+            renderTable();
+            renderIcons();
+            return;
+          }
+        });
+        tbody.dataset.bound = '1';
+      }
+      renderTable();
+      renderIcons();
+    } else if (state.admaView === 'stateEdit') {
+      loadStates();
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const saveBtn = document.querySelector('.admin-config [data-action="save-state"]');
+      const delBtn = document.querySelector('.admin-config [data-action="delete-state"]');
+      const s = (state.states||[]).find(x => x.id === state.selectedStateId);
+      if (!s) { state.admaView = 'statesList'; render(); return; }
+      const nameEl = document.getElementById('stateName'); if (nameEl) nameEl.value = s.name || '';
+      const closedEl = document.getElementById('stateClosed'); if (closedEl) closedEl.checked = !!s.closed;
+      if (backBtn && !backBtn.dataset.bound) { backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'statesList'; render(); }); backBtn.dataset.bound = '1'; }
+      if (saveBtn && !saveBtn.dataset.bound) {
+        saveBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const name = (document.getElementById('stateName')?.value || '').trim();
+          const closed = !!document.getElementById('stateClosed')?.checked;
+          state.states = (state.states||[]).map(x => x.id === s.id ? { ...x, name, closed } : x);
+          saveStates();
+          showSuccessAlert(tr('Estado actualizado','State updated'));
+          state.admaView = 'statesList';
+          render();
+        });
+        saveBtn.dataset.bound = '1';
+      }
+      if (delBtn && !delBtn.dataset.bound) {
+        delBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          state.states = (state.states||[]).filter(x => x.id !== s.id);
+          saveStates();
+          showSuccessAlert(tr('Estado eliminado','State deleted'));
+          state.selectedStateId = null;
+          state.admaView = 'statesList';
+          render();
+        });
+        delBtn.dataset.bound = '1';
+      }
+      renderIcons();
+    } else if (state.admaView === 'stateCreate') {
+      loadStates();
+      const backBtn = document.querySelector('.admin-config [data-action="back"]');
+      const saveBtn = document.querySelector('.admin-config [data-action="create-state"]');
+      if (backBtn && !backBtn.dataset.bound) { backBtn.addEventListener('click', (e) => { e.preventDefault(); state.admaView = 'statesList'; render(); }); backBtn.dataset.bound = '1'; }
+      if (saveBtn && !saveBtn.dataset.bound) {
+        saveBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const name = (document.getElementById('newStateName')?.value || '').trim();
+          const closed = !!document.getElementById('newStateClosed')?.checked;
+          if (!name) { showErrorAlert(tr('Complete los campos requeridos','Fill required fields')); return; }
+          const nextId = ((state.states||[]).reduce((m, x) => Math.max(m, x.id), 0) + 1) || 1;
+          state.states = [ ...(state.states||[]), { id: nextId, name, closed } ];
+          saveStates();
+          showSuccessAlert(tr('Estado creado','State created'));
+          state.admaView = 'statesList';
+          render();
+        });
+        saveBtn.dataset.bound = '1';
+      }
       renderIcons();
     } else {
       document.querySelectorAll('.admin-item').forEach(btn => {
@@ -1906,23 +2226,27 @@ const render = () => {
             state.admaView = 'changePass';
             render();
             return;
-          } else if (act === 'manage-users') {
-<<<<<<< HEAD
-            state.admaView = 'users';
-            render();
-            return;
-          } else if (act === 'manage-categories') {
-            state.admaView = 'categories';
-=======
-            state.admaView = 'usersList';
-            render();
-            return;
-          } else if (act === 'manage-categories') {
-            state.admaView = 'categoriesList';
->>>>>>> 1e6cfb459a8a78bb8d76ac8826444e672491690f
-            render();
-            return;
-          }
+      } else if (act === 'manage-users') {
+        state.admaView = 'usersList';
+        render();
+        return;
+      } else if (act === 'manage-departments') {
+        state.admaView = 'departmentsList';
+        render();
+        return;
+        } else if (act === 'manage-categories') {
+          state.admaView = 'categories';
+          render();
+          return;
+        } else if (act === 'manage-priorities') {
+          state.admaView = 'prioritiesList';
+          render();
+          return;
+        } else if (act === 'manage-states') {
+          state.admaView = 'statesList';
+          render();
+          return;
+        }
           try {
             console.log('Admin action:', act);
             alert(tr('Acción administrativa pendiente','Administrative action pending'));
@@ -2241,7 +2565,7 @@ const render = () => {
       const wantsChatbot = (hash === '#chatbot' || search.includes('openChatbot=1'));
       const wantsSysInfo = (hash === '#sysinfo' || search.includes('openSysInfo=1'));
       if (wantsCatalog) { document.getElementById('fabMain')?.click(); }
-      if (wantsRequests) { try { if (typeof window.openRequestsModal === 'function') window.openRequestsModal(); } catch(_){} }
+      if (wantsRequests) { try { if (state.activePage !== 'planning' && typeof window.openRequestsModal === 'function') window.openRequestsModal(); } catch(_){} }
       if (wantsChatbot) { try { if (typeof window.openChatbotModal === 'function') window.openChatbotModal(); } catch(_){} }
       if (wantsSysInfo) { try { if (typeof window.openSysInfoModal === 'function') window.openSysInfoModal(); } catch(_){} }
     } catch(_) {}
@@ -2314,6 +2638,9 @@ const render = () => {
       saveBtn.addEventListener('click', () => {
         const title = titleInput?.value?.trim() || t('newTask');
         const category = categorySelect?.value || 'recent';
+        const opt = (categorySelect && categorySelect.selectedOptions && categorySelect.selectedOptions[0]) || null;
+        const categoryLabel = String(opt?.textContent || '').trim();
+        const priorityId = opt?.dataset?.priorityId ? Number(opt.dataset.priorityId) : undefined;
         const reqParsed = parseVisible(reqInput?.value || '');
         const solParsed = null;
         const meetParsed = null;
@@ -2321,6 +2648,8 @@ const render = () => {
         addTask({
           title,
           category,
+          categoryLabel,
+          priorityId,
           requestDate: toIso(reqParsed || state.modalDate || new Date()),
           solutionDate: toIso(solParsed),
           meetingDate: toIso(meetParsed),
