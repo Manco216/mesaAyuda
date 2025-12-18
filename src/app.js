@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -2462,7 +2462,7 @@ function openChartModal(defaultId, previewType) {
         m.id = 'requestProcessModal';
         m.className = 'modal';
         m.setAttribute('hidden','true');
-        m.innerHTML = '<div class="modal-backdrop"></div><div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="processTitle"><div class="modal-header"><h2 id="processTitle">Seleccione proceso</h2></div><div class="modal-content"><div class="menu-section"><div class="menu-title">¿A cuál proceso quiere hacer la solicitud?</div><div class="menu-actions"><select id="rqProcessSelect" class="menu-select"><option value="Gestión Contable">Gestión Contable</option><option value="Soporte TI">Soporte TI</option><option value="Operaciones">Operaciones</option><option value="General">General</option></select></div></div><div class="modal-actions"><button type="button" id="rqProcessAccept" class="modal-add-btn">Aceptar</button></div></div></div>';
+        m.innerHTML = '<div class="modal-backdrop"></div><div class="modal-dialog process" role="dialog" aria-modal="true" aria-labelledby="processTitle"><div class="modal-header"><h2 id="processTitle">Seleccione proceso</h2></div><div class="modal-content"><div class="menu-section"><div class="menu-title">¿A cuál proceso quiere hacer la solicitud?</div><div class="menu-actions"><select id="rqProcessSelect" class="menu-select"><option value="">Seleccione</option><option value="Gestión Contable">Gestión Contable</option><option value="Soporte TI">Soporte TI</option><option value="Operaciones">Operaciones</option><option value="General">General</option></select></div><div id="rqProcessError" class="error-text"></div></div><div class="modal-actions"><button type="button" id="rqProcessBack" class="modal-secondary-btn">Volver</button><button type="button" id="rqProcessAccept" class="modal-add-btn" disabled>Aceptar</button></div></div></div>';
         document.body.appendChild(m);
         return m;
       };
@@ -2471,18 +2471,67 @@ function openChartModal(defaultId, previewType) {
       const m = ensureProcessModal();
       const accept = () => {
         const selP = document.getElementById('rqProcessSelect');
-        const val = selP && selP.value ? String(selP.value).trim() : 'General';
+        const val = selP && selP.value ? String(selP.value).trim() : '';
+        if (!val) {
+          const err = document.getElementById('rqProcessError');
+          if (err) err.textContent = 'Seleccione un proceso';
+          if (selP) selP.focus();
+          return;
+        }
         requestsState.process = val;
         applyProcess(val);
         disableForm(false);
+        const panel2 = document.getElementById('requestNewPanel');
+        const listPanel2 = document.getElementById('requestsListPanel');
+        const container2 = document.getElementById('requestsContainer');
+        const topbar2 = document.querySelector('#requestsContainer .requests-topbar');
+        const filtersBar2 = document.querySelector('#requestsContainer .requests-filters');
+        if (panel2 && panel2.hidden) {
+          panel2.hidden = false;
+          panel2.setAttribute('aria-hidden','false');
+          void panel2.offsetWidth;
+          panel2.classList.add('show');
+          if (listPanel2) listPanel2.hidden = true;
+          if (container2) container2.classList.add('overlaying');
+          if (topbar2) topbar2.hidden = true;
+          if (filtersBar2) filtersBar2.hidden = true;
+        }
         m.classList.remove('show');
         m.setAttribute('hidden','true');
       };
       const btn = m.querySelector('#rqProcessAccept');
+      const backBtn = m.querySelector('#rqProcessBack');
+      const backdrop = m.querySelector('.modal-backdrop');
       disableForm(true);
       m.classList.add('show');
       m.removeAttribute('hidden');
+      if (backdrop && !backdrop.dataset.bound) { backdrop.addEventListener('click', function(e){ e.stopPropagation(); }); backdrop.dataset.bound='1'; }
       if (btn && !btn.dataset.bound) { btn.addEventListener('click', accept); btn.dataset.bound='1'; }
+      const onChange = () => {
+        const selP = document.getElementById('rqProcessSelect');
+        const hasValue = !!(selP && selP.value && selP.value.trim());
+        const err = document.getElementById('rqProcessError');
+        if (err) err.textContent = '';
+        if (btn) btn.disabled = !hasValue;
+      };
+      const selEl = document.getElementById('rqProcessSelect');
+      if (selEl && !selEl.dataset.bound) { selEl.addEventListener('change', onChange); selEl.dataset.bound='1'; }
+      if (backBtn && !backBtn.dataset.bound) {
+        backBtn.addEventListener('click', () => {
+          m.classList.remove('show');
+          m.setAttribute('hidden','true');
+          const panel = document.getElementById('requestNewPanel');
+          const container = document.getElementById('requestsContainer');
+          const menuView = document.getElementById('requestsMenuView');
+          const backArrow = document.getElementById('requestsBackArrow');
+          requestsState.lastOption = 'menu';
+          if (panel) { panel.classList.remove('show'); panel.setAttribute('aria-hidden','true'); panel.hidden = true; }
+          if (container) container.hidden = true;
+          if (menuView) { menuView.hidden = false; void menuView.offsetWidth; menuView.classList.add('show'); }
+          if (backArrow) backArrow.hidden = true;
+        });
+        backBtn.dataset.bound='1';
+      }
     })();
   }
 

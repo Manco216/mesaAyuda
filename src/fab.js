@@ -296,7 +296,7 @@
         m.id = 'requestProcessModal';
         m.className = 'modal';
         m.setAttribute('hidden','true');
-        m.innerHTML = '<div class="modal-backdrop"></div><div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="processTitle"><div class="modal-header"><h2 id="processTitle">Seleccione proceso</h2></div><div class="modal-content"><div class="menu-section"><div class="menu-title">¿A cuál proceso quiere hacer la solicitud?</div><div class="menu-actions"><select id="rqProcessSelect" class="menu-select"><option value="Gestión Contable">Gestión Contable</option><option value="Soporte TI">Soporte TI</option><option value="Operaciones">Operaciones</option><option value="General">General</option></select></div></div><div class="modal-actions"><button type="button" id="rqProcessAccept" class="modal-add-btn">Aceptar</button></div></div></div>';
+        m.innerHTML = '<div class="modal-backdrop"></div><div class="modal-dialog process" role="dialog" aria-modal="true" aria-labelledby="processTitle"><div class="modal-header"><h2 id="processTitle">Seleccione proceso</h2></div><div class="modal-content"><div class="menu-section"><div class="menu-title">¿A cuál proceso quiere hacer la solicitud?</div><div class="menu-actions"><select id="rqProcessSelect" class="menu-select"><option value="">Seleccione</option><option value="Gestión Contable">Gestión Contable</option><option value="Soporte TI">Soporte TI</option><option value="Operaciones">Operaciones</option><option value="General">General</option></select></div><div id="rqProcessError" class="error-text"></div></div><div class="modal-actions"><button type="button" id="rqProcessBack" class="modal-secondary-btn">Volver</button><button type="button" id="rqProcessAccept" class="modal-add-btn" disabled>Aceptar</button></div></div></div>';
         document.body.appendChild(m);
         return m;
       };
@@ -305,18 +305,51 @@
       var m = ensureProcessModal();
       var accept = function(){
         var selP = document.getElementById('rqProcessSelect');
-        var val = selP && selP.value ? String(selP.value).trim() : 'General';
+        var val = selP && selP.value ? String(selP.value).trim() : '';
+        if (!val) { var err = document.getElementById('rqProcessError'); if (err) err.textContent = 'Seleccione un proceso'; if (selP) selP.focus(); return; }
         __rq.process = val;
         applyProcess(val);
         disableForm(false);
+        var panel2 = document.getElementById('requestNewPanel');
+        var listPanel2 = document.getElementById('requestsListPanel');
+        var container2 = document.getElementById('requestsContainer');
+        if (panel2 && panel2.hidden) {
+          panel2.hidden = false;
+          panel2.setAttribute('aria-hidden','false');
+          void panel2.offsetWidth;
+          panel2.classList.add('show');
+          if (listPanel2) listPanel2.classList.add('dimmed');
+          if (container2) container2.classList.add('overlaying');
+        }
         m.classList.remove('show');
         m.setAttribute('hidden','true');
       };
       var btn = m.querySelector('#rqProcessAccept');
+      var backBtn = m.querySelector('#rqProcessBack');
+      var backdrop = m.querySelector('.modal-backdrop');
       disableForm(true);
       m.classList.add('show');
       m.removeAttribute('hidden');
+      if (backdrop && !backdrop.dataset.bound) { backdrop.addEventListener('click', function(e){ e.stopPropagation(); }); backdrop.dataset.bound='1'; }
       if (btn && !btn.dataset.bound) { btn.addEventListener('click', accept); btn.dataset.bound='1'; }
+      var onChange = function(){ var selP = document.getElementById('rqProcessSelect'); var has = !!(selP && selP.value && selP.value.trim()); var err = document.getElementById('rqProcessError'); if (err) err.textContent=''; if (btn) btn.disabled = !has; };
+      var selEl = document.getElementById('rqProcessSelect'); if (selEl && !selEl.dataset.bound) { selEl.addEventListener('change', onChange); selEl.dataset.bound='1'; }
+      if (backBtn && !backBtn.dataset.bound) {
+        backBtn.addEventListener('click', function(){
+          m.classList.remove('show');
+          m.setAttribute('hidden','true');
+          var panel = document.getElementById('requestNewPanel');
+          var container = document.getElementById('requestsContainer');
+          var menuView = document.getElementById('requestsMenuView');
+          var backArrow = document.getElementById('requestsBackArrow');
+          __rq.lastOption = 'menu';
+          if (panel) { panel.classList.remove('show'); panel.setAttribute('aria-hidden','true'); panel.hidden = true; }
+          if (container) container.hidden = true;
+          if (menuView) { menuView.hidden = false; void menuView.offsetWidth; menuView.classList.add('show'); }
+          if (backArrow) backArrow.hidden = true;
+        });
+        backBtn.dataset.bound='1';
+      }
     })();
   }
   function __rqCloseNewForm(){

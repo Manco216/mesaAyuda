@@ -188,6 +188,23 @@ button:hover { filter: brightness(0.95); }
 .modal-clear-btn { padding: 8px 14px; border-radius: 6px; background: #ef4444; color: #fff; border: none; cursor: pointer; margin-left: auto; }
 .modal-clear-btn:hover { background: #dc2626; }
 
+/* Proceso: modal pequeño con badge superior */
+.modal-dialog.process { width: min(420px, 92vw); overflow: hidden; }
+.modal-dialog.process .modal-content { padding: 16px; }
+.modal-dialog.process .modal-header { justify-content: center; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+.modal-dialog.process .menu-title { text-align: center; }
+.modal-dialog.process .modal-actions { justify-content: center; }
+.modal-dialog.process .modal-actions { gap: 10px; }
+.modal-dialog.process #rqProcessBack { background: #eef2f7; color: #374151; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); padding: 8px 14px; }
+.modal-dialog.process #rqProcessBack:hover { background: #e7edf5; }
+.modal-dialog.process #rqProcessAccept { border-radius: 10px; background: linear-gradient(90deg,var(--brand-primary),var(--brand-secondary)); }
+.modal-dialog.process .menu-actions { display: flex; justify-content: center; }
+.modal-dialog.process .menu-select { width: 80%; max-width: 320px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 10px; background: #fff; color: var(--color-text); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.modal-dialog.process .menu-select:focus { outline: 2px solid #60a5fa; outline-offset: 2px; border-color: var(--brand-secondary, #60a5fa); }
+.modal-add-btn[disabled] { opacity: 0.6; cursor: not-allowed; }
+.modal-badge { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); width: 86px; height: 86px; border-radius: 50%; background: linear-gradient(135deg,#43a047,#66bb6a); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; box-shadow: 0 6px 18px rgba(0,0,0,0.25); z-index: 3; }
+.modal-badge span { font-size: 14px; text-align: center; line-height: 1.1; }
+
 /* Toolbar del dashboard */
 /* (Revertido) Estilos de toolbar del dashboard eliminados */
 
