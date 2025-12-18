@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -2393,9 +2393,13 @@ function openChartModal(defaultId, previewType) {
     const panel = document.getElementById('requestNewPanel');
     const listPanel = document.getElementById('requestsListPanel');
     const container = document.getElementById('requestsContainer');
+    const menuView = document.getElementById('requestsMenuView');
     const topbar = document.querySelector('#requestsContainer .requests-topbar');
     const filtersBar = document.querySelector('#requestsContainer .requests-filters');
     if (!panel || !listPanel) return;
+    if (container) container.hidden = false;
+    if (menuView) { menuView.classList.remove('show'); menuView.hidden = true; }
+    try { requestsState.lastOption = 'new'; } catch(_){}
     panel.hidden = false;
     panel.setAttribute('aria-hidden','false');
     void panel.offsetWidth;
@@ -2486,6 +2490,9 @@ function openChartModal(defaultId, previewType) {
         const container2 = document.getElementById('requestsContainer');
         const topbar2 = document.querySelector('#requestsContainer .requests-topbar');
         const filtersBar2 = document.querySelector('#requestsContainer .requests-filters');
+        const menuView2 = document.getElementById('requestsMenuView');
+        if (container2) container2.hidden = false;
+        if (menuView2) { menuView2.classList.remove('show'); menuView2.hidden = true; }
         if (panel2 && panel2.hidden) {
           panel2.hidden = false;
           panel2.setAttribute('aria-hidden','false');
@@ -2689,8 +2696,19 @@ function openChartModal(defaultId, previewType) {
     requestsState.my = [r, ...requestsState.my];
     updateSuggestionsUI('');
     updateRequestsList();
+    try { if (typeof window.showSuccessAlert === 'function') window.showSuccessAlert('Guardado correctamente'); } catch(_){ }
     if (status) { status.textContent = 'Petición enviada correctamente'; status.classList.add('status-success'); }
-    setTimeout(() => { closeNewRequestForm(); resetNewRequestForm(); }, 600);
+    setTimeout(() => {
+      closeNewRequestForm();
+      resetNewRequestForm();
+      const menuView = document.getElementById('requestsMenuView');
+      const container = document.getElementById('requestsContainer');
+      const backArrow = document.getElementById('requestsBackArrow');
+      try { requestsState.lastOption = 'menu'; } catch(_){ }
+      if (container) container.hidden = true;
+      if (menuView) { menuView.hidden = false; void menuView.offsetWidth; menuView.classList.add('show'); }
+      if (backArrow) backArrow.hidden = true;
+    }, 600);
   }
 
   const fab = document.getElementById('fabContainer');

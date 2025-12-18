@@ -250,7 +250,11 @@
     var panel = document.getElementById('requestNewPanel');
     var listPanel = document.getElementById('requestsListPanel');
     var container = document.getElementById('requestsContainer');
+    var menuView = document.getElementById('requestsMenuView');
     if (!panel || !listPanel) return;
+    if (container) container.hidden = false;
+    if (menuView) { try { menuView.classList.remove('show'); menuView.hidden = true; } catch(_){} }
+    try { __rq.lastOption = 'new'; } catch(_){}
     panel.hidden = false;
     panel.setAttribute('aria-hidden','false');
     void panel.offsetWidth;
@@ -313,6 +317,9 @@
         var panel2 = document.getElementById('requestNewPanel');
         var listPanel2 = document.getElementById('requestsListPanel');
         var container2 = document.getElementById('requestsContainer');
+        var menuView2 = document.getElementById('requestsMenuView');
+        if (container2) container2.hidden = false;
+        if (menuView2) { try { menuView2.classList.remove('show'); menuView2.hidden = true; } catch(_){ } }
         if (panel2 && panel2.hidden) {
           panel2.hidden = false;
           panel2.setAttribute('aria-hidden','false');
@@ -390,8 +397,18 @@
       __rq.my = [r].concat(__rq.my);
       __rqUpdateSuggestionsUI('');
       __rqUpdateList();
+      try { if (typeof window.showSuccessAlert==='function') window.showSuccessAlert('Guardado correctamente'); } catch(_){ }
       var status = document.getElementById('requestNewStatus'); if (status){ status.textContent = 'Petición enviada correctamente'; status.classList.add('status-success'); }
-      setTimeout(function(){ __rqCloseNewForm(); var form = document.getElementById('requestNewForm'); if (form) form.reset(); }, 600);
+      setTimeout(function(){
+        __rqCloseNewForm(); var form = document.getElementById('requestNewForm'); if (form) form.reset();
+        var menuView = document.getElementById('requestsMenuView');
+        var container = document.getElementById('requestsContainer');
+        var backArrow = document.getElementById('requestsBackArrow');
+        __rq.lastOption = 'menu';
+        if (container) container.hidden = true;
+        if (menuView) { menuView.hidden = false; void menuView.offsetWidth; menuView.classList.add('show'); }
+        if (backArrow) backArrow.hidden = true;
+      }, 600);
     }); saveBtn.dataset.inited = 'true'; }
   }
   function __rqInitTabs(){

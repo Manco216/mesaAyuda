@@ -259,6 +259,8 @@ const showErrorAlert = (message) => {
   overlay.__hideTimer = setTimeout(() => { overlay.classList.remove('show'); overlay.__hideTimer = null; }, 2400);
 };
 
+try { window.showSuccessAlert = showSuccessAlert; window.showErrorAlert = showErrorAlert; } catch(_) {}
+
 // Obtiene el HTML de una plantilla definida en index.html
 const getTemplateHTML = (id) => {
   const tpl = document.getElementById(id);
