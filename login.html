@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Socya — Inicio de sesión</title>
+    <link rel="stylesheet" href="./src/login.css" />
+  </head>
+  <body>
+    <div class="bg-overlay"></div>
+    <div class="login-wrapper">
+      <form class="login-card" id="loginForm" action="" aria-label="Inicio de sesión">
+        <img class="logo-top-img" src="https://socya.org.co/wp-content/uploads/ImagenesTI/Icono_verde.png" alt="Icono" />
+        <h1 class="login-title">Bienvenido</h1>
+        <p class="login-sub">Ingresa tus credenciales para continuar</p>
+        <div class="form-field">
+          <label for="loginUser">email o usuario</label>
+          <input id="loginUser" name="username" type="text" autocomplete="username" placeholder="ej. usuario@socya.org.co" required />
+        </div>
+        <div class="form-field">
+          <label for="loginPass">password</label>
+          <input id="loginPass" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+        </div>
+        <button type="submit" class="login-submit">Iniciar sesión</button>
+      </form>
+    </div>
+    <script src="./src/login.js"></script>
+  </body>
+</html>

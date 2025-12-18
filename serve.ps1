@@ -2,8 +2,8 @@ Param(
   [int]$Port = 8000
 )
 
-Add-Type -AssemblyName System.Net.HttpListener
-Add-Type -AssemblyName System.IO
+try { $null = [System.Net.HttpListener] } catch { }
+try { $null = [System.IO.File] } catch { }
 
 $listener = New-Object System.Net.HttpListener
 # Registrar 127.0.0.1 y localhost si es posible, con fallback

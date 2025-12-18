@@ -649,7 +649,7 @@ const pickTextColor = (bgHex) => { try { return luminance(bgHex) > 0.5 ? '#11182
 const PALETTES = [
   { id: 'dorado', label: 'Dorado', swatches: ['#b57c00','#d09306','#ecab0f','#f7d547','#ffff72'], apply: { primary: '#8a5a00', secondary: '#ecab0f', accent: '#f7d547' } },
   { id: 'naranja', label: 'Naranja', swatches: ['#c65314','#e26a2c','#ff8243','#ffae6a','#ffd792'], apply: { primary: '#c65314', secondary: '#ff8243', accent: '#e26a2c' } },
-  { id: 'verde', label: 'Verde', swatches: ['#006D2C','#238845','#41AB5D','#74C476','#A1D99B'], apply: { primary: '#006D2C', secondary: '#74C476', accent: '#41AB5D' } },
+  { id: 'verde', label: 'Verde', swatches: ['#4E7608','#69A50F','#80C612','#9FDA3E','#BEEB73'], apply: { primary: '#80C612', secondary: '#9FDA3E', accent: '#69A50F' } },
   { id: 'teal', label: 'Teal', swatches: ['#2BC5BE','#4EC8C7','#6CCACF','#86CFD5','#A7DDE4'], apply: { primary: '#2BC5BE', secondary: '#86CFD5', accent: '#4EC8C7' } },
   { id: 'azul-oscuro', label: 'Azul oscuro', swatches: ['#02152b','#02253d','#012e46','#153f59','#365b77'], apply: { primary: '#0c2340', secondary: '#365b77', accent: '#153f59' } },
 ];
@@ -1116,38 +1116,7 @@ const renderCalendar = () => {
   ].join('');
 
   const selected = state.selectedTask;
-  const details = selected ? `
-    <div class="event-form-section">
-      <h3>${tr('Detalles del Pendiente','Pending Details')}</h3>
-      <div class="event-details">
-        <div class="event-detail-item">
-          <label>${tr('Título:','Title:')}</label>
-          <p>${selected.title}</p>
-        </div>
-        <div class="event-detail-item">
-          <label>${tr('Fecha y hora de petición:','Request date and time:')}</label>
-          <p>${formatDateDisplay(selected.requestDate)}</p>
-        </div>
-        <div class="event-detail-item">
-          <label>${tr('Fecha y hora de solución:','Solution date and time:')}</label>
-          <input id="solution-input" type="text" placeholder="${tr('Selecciona fecha y hora','Pick date and time')}" />
-        </div>
-        <div class="event-detail-item">
-          <label>${tr('Fecha y hora de reunión:','Meeting date and time:')}</label>
-          <input id="meeting-input" type="text" placeholder="${tr('Selecciona fecha y hora','Pick date and time')}" />
-        </div>
-        <div class="event-detail-item">
-          <button type="button" class="confirm-date-btn" id="confirm-btn">${tr('Confirmar fechas','Confirm dates')}</button>
-        </div>
-        <div class="event-detail-item">
-          <label>${tr('Estado:','Status:')}</label>
-          ${selected.solutionDate && new Date(selected.solutionDate) <= new Date()
-            ? `<span class="status-badge status-solved">${tr('Ya solucionado','Already solved')}</span>`
-            : `<span class="status-badge" style="background-color:${getCategoryColor(selected.category)}">${getTaskLabel(selected)}</span>`}
-        </div>
-      </div>
-    </div>
-  ` : '';
+  const details = '';
 
   return `
     <div class="calendar-container">
@@ -1160,9 +1129,8 @@ const renderCalendar = () => {
         <div class="calendar-weekdays">
           ${(state.preferences?.language==='en'?['Sun','Mon','Tue','Wed','Thu','Fri','Sat']:weekdayShort).map(d => `<div class="weekday">${d}</div>`).join('')}
         </div>
-        <div class="calendar-days">${dayCells}</div>
+      <div class="calendar-days">${dayCells}</div>
       </div>
-      ${details}
     </div>
   `;
 };
@@ -1209,6 +1177,50 @@ const renderTaskList = () => {
       <div class="filter-tabs" role="tablist" aria-label="${t('pendingHeader')} filters">${tabs}</div>
       <div class="task-list">${list}</div>
     </div>
+  `;
+};
+
+const renderTaskDetailsModal = () => {
+  const selected = state.selectedTask;
+  if (!selected) return '';
+  return `
+  <div class="modal-overlay" id="taskDetailsOverlay">
+    <div class="event-modal" id="taskDetailsModal">
+      <div class="modal-header">
+        <h3>${tr('Detalles del Pendiente','Pending Details')}</h3>
+        <button class="close-btn" id="taskDetailsClose"><span data-lucide="x"></span></button>
+      </div>
+      <div class="event-form">
+        <div class="event-details">
+          <div class="event-detail-item">
+            <label>${tr('Título:','Title:')}</label>
+            <p>${selected.title}</p>
+          </div>
+          <div class="event-detail-item">
+            <label>${tr('Fecha y hora de petición:','Request date and time:')}</label>
+            <p>${formatDateDisplay(selected.requestDate)}</p>
+          </div>
+          <div class="event-detail-item">
+            <label>${tr('Fecha y hora de solución:','Solution date and time:')}</label>
+            <input id="solution-input" type="text" placeholder="${tr('Selecciona fecha y hora','Pick date and time')}" />
+          </div>
+          <div class="event-detail-item">
+            <label>${tr('Fecha y hora de reunión:','Meeting date and time:')}</label>
+            <input id="meeting-input" type="text" placeholder="${tr('Selecciona fecha y hora','Pick date and time')}" />
+          </div>
+          <div class="event-detail-item">
+            <button type="button" class="confirm-date-btn" id="confirm-btn">${tr('Confirmar fechas','Confirm dates')}</button>
+          </div>
+          <div class="event-detail-item">
+            <label>${tr('Estado:','Status:')}</label>
+            ${selected.solutionDate && new Date(selected.solutionDate) <= new Date()
+              ? `<span class="status-badge status-solved">${tr('Ya solucionado','Already solved')}</span>`
+              : `<span class="status-badge" style="background-color:${getCategoryColor(selected.category)}">${getTaskLabel(selected)}</span>`}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   `;
 };
 
@@ -1474,6 +1486,7 @@ const render = () => {
       </div>
     </div>
     ${state.showModal ? renderEventModal() : ''}
+    ${(state.activePage==='planning' && state.selectedTask) ? renderTaskDetailsModal() : ''}
     ${state.showAdmaAuth ? `
       <div id="admaAuth" class="auth-modal show" role="dialog" aria-modal="true" aria-labelledby="admaAuthTitle">
         <div class="auth-backdrop"></div>
@@ -2542,6 +2555,17 @@ const render = () => {
         if (meetParsed) finalMeeting = (meetParsed < now ? now : meetParsed).toISOString().slice(0,16);
         updateTask(state.selectedTask.id, { solutionDate: finalSolution || null, meetingDate: finalMeeting || null });
       });
+    }
+
+    const closeBtn = document.getElementById('taskDetailsClose');
+    if (closeBtn && !closeBtn.dataset.bound) {
+      closeBtn.addEventListener('click', () => { state.selectedTask = null; render(); });
+      closeBtn.dataset.bound = '1';
+    }
+    const overlay = document.getElementById('taskDetailsOverlay');
+    if (overlay && !overlay.dataset.bound) {
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) { state.selectedTask = null; render(); } });
+      overlay.dataset.bound = '1';
     }
   }
 

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// JS externo para dashboard.html, migrado desde el script inline
 // Registra Chart.js UMD si está disponible
 if (window.Chart && window.Chart.register && window.Chart.registerables) {
   try { window.Chart.register(...window.Chart.registerables); } catch {}
@@ -1500,7 +1500,14 @@ function openChartModal(defaultId, previewType) {
   }
 
   // Modal de Peticiones
-  let requestsState = { view: 'my', query: '', all: [], my: [], received: [], lastOption: 'menu', criteria: null, filterMode: null };
+  let requestsState = { view: 'my', query: '', all: [], my: [], received: [], lastOption: 'menu', prevOption: null, criteria: null, filterMode: null };
+  function getRequestsPersisted() {
+    try { const raw = localStorage.getItem('socya:rq:last'); if (raw) { const j = JSON.parse(raw); if (j && typeof j==='object') return j; } } catch(_){}
+    return null;
+  }
+  function setRequestsPersisted(obj) {
+    try { localStorage.setItem('socya:rq:last', JSON.stringify(obj||{})); } catch(_){}
+  }
   function loadRequests() {
     // Fuente dinámica: si existe window.REQUESTS_DATA se usa, si no, ejemplo
     const demo = [
@@ -1665,8 +1672,6 @@ function openChartModal(defaultId, previewType) {
   function setRequestsView(view) {
     const myBtn = document.getElementById('reqTabMy');
     const recBtn = document.getElementById('reqTabReceived');
-    const fMy = document.getElementById('rqFilterMy');
-    const fRec = document.getElementById('rqFilterReceived');
     const cAll = document.getElementById('rqFilterClosedAll');
     const cMine = document.getElementById('rqFilterClosedMine');
     const cAssigned = document.getElementById('rqFilterClosedAssigned');
@@ -1678,15 +1683,6 @@ function openChartModal(defaultId, previewType) {
       } else {
         recBtn.classList.add('active'); recBtn.setAttribute('aria-selected','true');
         myBtn.classList.remove('active'); myBtn.setAttribute('aria-selected','false');
-      }
-    }
-    if (fMy && fRec) {
-      if (view === 'my') {
-        fMy.classList.add('active');
-        fRec.classList.remove('active');
-      } else {
-        fRec.classList.add('active');
-        fMy.classList.remove('active');
       }
     }
     if (cAll || cMine || cAssigned) {
@@ -1707,6 +1703,16 @@ function openChartModal(defaultId, previewType) {
     set(cAll, which === 'all');
     set(cMine, which === 'mine');
     set(cAssigned, which === 'assigned');
+  }
+
+  function setFiltersActive(which) {
+    const fMy = document.getElementById('rqFilterMy');
+    const cAll = document.getElementById('rqFilterClosedAll');
+    const cMine = document.getElementById('rqFilterClosedMine');
+    [fMy, cAll, cMine].forEach(el => { if (el) el.classList.remove('active'); });
+    if (which === 'my' && fMy) fMy.classList.add('active');
+    if (which === 'closed_all' && cAll) cAll.classList.add('active');
+    if (which === 'closed_my' && cMine) cMine.classList.add('active');
   }
 
   function setupRequestsSearch() {
@@ -1788,7 +1794,7 @@ function openChartModal(defaultId, previewType) {
         <div><span class="request-badge ${badgeClass(r.estado)}">${statusLabel(r.estado)}</span></div>
       </li>
     `).join('');
-    el.innerHTML = items;
+    el.innerHTML = items || '<li class="requests-empty" aria-live="polite">No se encontraron solicitudes.</li>';
     if (!el.dataset.inited) {
       el.addEventListener('click', onRequestActivate);
       el.addEventListener('keydown', (e) => {
@@ -1884,10 +1890,13 @@ function openChartModal(defaultId, previewType) {
     const item = e.target.closest('.request-item');
     if (!item) return;
     const idx = Number(item.getAttribute('data-index'));
-    const base = requestsState.view === 'my' ? requestsState.my : requestsState.received;
+    let src = requestsState.view === 'my' ? requestsState.my : requestsState.received;
+    if (requestsState.filterMode === 'closed_all') src = requestsState.all;
+    else if (requestsState.filterMode === 'closed_my') src = requestsState.my;
+    else if (requestsState.filterMode === 'closed_received') src = requestsState.received;
     const current = (requestsState.lastOption === 'search' && requestsState.criteria)
-      ? filterRequestsAdvanced(base, requestsState.criteria)
-      : filterRequests(base, requestsState.query);
+      ? filterRequestsAdvanced(src, requestsState.criteria)
+      : filterRequests(src, requestsState.query);
     const r = current[idx];
     if (!r) return;
     const detailsPanel = document.getElementById('requestDetailsPanel');
@@ -1966,6 +1975,13 @@ function openChartModal(defaultId, previewType) {
       requestsState.query = '';
     }
     updateSuggestionsUI('');
+    const persisted = getRequestsPersisted();
+    if (persisted) {
+      if (!requestsState.prevOption || requestsState.prevOption === 'menu') requestsState.prevOption = persisted.opt || persisted.lastOption || requestsState.prevOption;
+      if (persisted.view) requestsState.view = persisted.view;
+      if (typeof persisted.query === 'string') requestsState.query = persisted.query;
+      if (persisted.filterMode) requestsState.filterMode = persisted.filterMode;
+    }
     const myBtn = document.getElementById('reqTabMy');
     const recBtn = document.getElementById('reqTabReceived');
     if (myBtn && !myBtn.dataset.inited) { myBtn.addEventListener('click', () => setRequestsView('my')); myBtn.dataset.inited = 'true'; }
@@ -2001,7 +2017,7 @@ function openChartModal(defaultId, previewType) {
     if (!filtersBarExisting && container) {
       const fb = document.createElement('div');
       fb.className = 'requests-filters';
-      fb.innerHTML = '<div class="filters-row"><button id="rqFilterMy" class="tab-btn" type="button">Mis Peticiones</button><div class="filters-closed"><button id="rqFilterClosedAll" class="tab-btn" type="button">Todos cerrados</button><button id="rqFilterClosedMine" class="tab-btn" type="button">Mis cerradas</button></div><div class="search-input-wrap"><input id="requestsSearchInput" type="text" placeholder="Buscar" aria-label="Buscar peticiones" autocomplete="off" /><ul id="requestsSearchSuggestions" class="search-suggestions" hidden aria-label="Sugerencias"></ul></div></div>';
+      fb.innerHTML = '<div class="filters-row"><div class="filters-tabs"><button id="rqFilterMy" class="tab-btn" type="button">Todas</button><div class="filters-closed"><button id="rqFilterClosedAll" class="tab-btn" type="button">Todos cerrados</button><button id="rqFilterClosedMine" class="tab-btn" type="button">Recibidas</button></div></div><div class="search-input-wrap"><input id="requestsSearchInput" type="text" placeholder="Buscar" aria-label="Buscar peticiones" autocomplete="off" /><ul id="requestsSearchSuggestions" class="search-suggestions" hidden aria-label="Sugerencias"></ul></div></div>';
       container.insertBefore(fb, listPanel);
     }
     const cancelBtn = document.getElementById('requestNewCancel');
@@ -2038,6 +2054,12 @@ function openChartModal(defaultId, previewType) {
     const container = document.getElementById('requestsContainer');
     const listPanel = document.getElementById('requestsListPanel');
     let searchView = document.getElementById('requestsSearchView');
+    const detailsPanelInit = document.getElementById('requestDetailsPanel');
+    const newPanelInit = document.getElementById('requestNewPanel');
+    if (detailsPanelInit) { detailsPanelInit.classList.remove('show'); detailsPanelInit.setAttribute('aria-hidden','true'); detailsPanelInit.hidden = true; }
+    if (newPanelInit) { newPanelInit.classList.remove('show'); newPanelInit.setAttribute('aria-hidden','true'); newPanelInit.hidden = true; }
+    if (listPanel) { listPanel.hidden = false; listPanel.classList.remove('dimmed'); }
+    if (container) { container.classList.remove('overlaying'); }
     if (!menuView && content) {
       menuView = document.createElement('div');
       menuView.id = 'requestsMenuView';
@@ -2046,7 +2068,7 @@ function openChartModal(defaultId, previewType) {
       content.appendChild(menuView);
       if (window.lucide && window.lucide.createIcons) { try { window.lucide.createIcons(); } catch {} }
       const showMenu = () => {
-        if (menuView) { menuView.classList.add('show'); }
+        if (menuView) { menuView.hidden = false; void menuView.offsetWidth; menuView.classList.add('show'); }
         if (container) { container.hidden = true; }
         if (searchView) { searchView.classList.remove('show'); searchView.hidden = true; }
         const resultsViewEl = document.getElementById('requestsResultsView');
@@ -2066,15 +2088,26 @@ function openChartModal(defaultId, previewType) {
         return v;
       };
       const applyOption = (opt) => {
-        if (menuView) { menuView.classList.remove('show'); }
+        if (menuView) { menuView.classList.remove('show'); menuView.hidden = true; }
         if (container) { container.hidden = false; }
-        if (listPanel) { listPanel.classList.remove('dimmed'); }
+        if (listPanel) { listPanel.hidden = false; listPanel.classList.remove('dimmed'); }
+        const rvHide = document.getElementById('requestsResultsView');
+        if (rvHide) { rvHide.classList.remove('show'); rvHide.hidden = true; }
+        if (searchView) { searchView.classList.remove('show'); searchView.hidden = true; }
         requestsState.lastOption = opt;
         if (backBtn) backBtn.hidden = false;
         switch (opt) {
-          case 'my': setRequestsView('my'); break;
-          case 'received': setRequestsView('received'); break;
-          case 'closed': requestsState.query = 'Culminado'; updateSuggestionsUI(requestsState.query); updateRequestsList(); break;
+          case 'my': if (container) container.classList.remove('overlaying'); setFiltersActive('my'); setRequestsView('my'); break;
+          case 'received': if (container) container.classList.remove('overlaying'); setFiltersActive('my'); setRequestsView('received'); break;
+          case 'closed': {
+            if (container) container.classList.remove('overlaying');
+            requestsState.filterMode = 'closed_all';
+            setClosedActive('all');
+            requestsState.query = '';
+            setRequestsView('my');
+            updateRequestsList();
+            break;
+          }
           case 'search': {
             const v = ensureSearchView(); searchView = v;
             if (container) container.hidden = true;
@@ -2227,20 +2260,28 @@ function openChartModal(defaultId, previewType) {
     try { if (wrapStatus) wrapStatus.remove(); } catch(_){}
     try { if (wrapAssign) wrapAssign.remove(); } catch(_){}
     try { if (wrapTime) wrapTime.remove(); } catch(_){}
-    const fMy = document.getElementById('rqFilterMy'); if (fMy && !fMy.dataset.inited) { fMy.addEventListener('click', () => { requestsState.filterMode = null; const b = document.getElementById('rqMenuMy'); if (b) b.click(); else setRequestsView('my'); }); fMy.dataset.inited = 'true'; }
-    const fClsAll = document.getElementById('rqFilterClosedAll'); if (fClsAll && !fClsAll.dataset.inited) { fClsAll.addEventListener('click', () => { requestsState.filterMode = 'closed_all'; setClosedActive('all'); updateRequestsList(); }); fClsAll.dataset.inited = 'true'; }
-    const fClsMine = document.getElementById('rqFilterClosedMine'); if (fClsMine && !fClsMine.dataset.inited) { fClsMine.addEventListener('click', () => { requestsState.filterMode = 'closed_my'; setRequestsView('my'); setClosedActive('mine'); updateRequestsList(); }); fClsMine.dataset.inited = 'true'; }
+    const fMy = document.getElementById('rqFilterMy'); if (fMy && !fMy.dataset.inited) { fMy.addEventListener('click', () => { requestsState.filterMode = null; setFiltersActive('my'); setRequestsView('my'); updateRequestsList(); }); fMy.dataset.inited = 'true'; }
+    const fClsAll = document.getElementById('rqFilterClosedAll'); if (fClsAll && !fClsAll.dataset.inited) { fClsAll.addEventListener('click', () => { requestsState.filterMode = 'closed_all'; setFiltersActive('closed_all'); updateRequestsList(); }); fClsAll.dataset.inited = 'true'; }
+    const fClsMine = document.getElementById('rqFilterClosedMine'); if (fClsMine && !fClsMine.dataset.inited) { fClsMine.addEventListener('click', () => { requestsState.filterMode = 'closed_my'; setRequestsView('my'); setFiltersActive('closed_my'); updateRequestsList(); }); fClsMine.dataset.inited = 'true'; }
     setupRequestsSearch();
 
     if (requestsState.lastOption && requestsState.lastOption !== 'menu') {
       const opt = requestsState.lastOption;
       const input = document.getElementById('requestsSearchInput');
       if (opt === 'closed') { requestsState.query = 'Culminado'; }
-      if (menuView) menuView.classList.remove('show');
+      if (menuView) { menuView.classList.remove('show'); menuView.hidden = true; }
       if (opt !== 'search' && container) container.hidden = false;
+      if (opt !== 'search' && listPanel) { listPanel.hidden = false; listPanel.classList.remove('dimmed'); }
+      if (opt !== 'search') {
+        const rv = document.getElementById('requestsResultsView');
+        const sv = document.getElementById('requestsSearchView');
+        if (rv) { rv.classList.remove('show'); rv.hidden = true; }
+        if (sv) { sv.classList.remove('show'); sv.hidden = true; }
+      }
       ensureBackArrow();
-      if (opt === 'my') setRequestsView('my');
-      else if (opt === 'received') setRequestsView('received');
+      if (opt === 'my') { setFiltersActive('my'); setRequestsView('my'); }
+      else if (opt === 'received') { setFiltersActive('my'); setRequestsView('received'); }
+      else if (opt === 'closed') { requestsState.filterMode = 'closed_all'; setClosedActive('all'); setRequestsView('my'); }
       else if (opt === 'search') {
         const v = document.getElementById('requestsSearchView') || (content && content.querySelector('#requestsSearchView'));
         let viewEl = v;
@@ -2348,10 +2389,35 @@ function openChartModal(defaultId, previewType) {
       else setRequestsView('my');
       updateSuggestionsUI(requestsState.query);
       updateRequestsList();
+      const rv2 = document.getElementById('requestsResultsView');
+      const nothingVisible = (!menuView || menuView.hidden) && (!container || container.hidden) && (!searchView || searchView.hidden) && (!rv2 || rv2.hidden);
+      if (nothingVisible) {
+        if (container) container.hidden = false;
+        if (menuView) { menuView.classList.remove('show'); menuView.hidden = true; }
+        setFiltersActive('my');
+        setRequestsView('my');
+      }
     } else {
-      if (container) container.hidden = true;
-      if (backBtn) backBtn.hidden = true;
-      if (menuView) menuView.classList.add('show');
+      const prevOpt = (requestsState.prevOption && requestsState.prevOption !== 'menu') ? requestsState.prevOption : (persisted && persisted.opt && persisted.opt !== 'menu' ? persisted.opt : null);
+      if (prevOpt) {
+        if (menuView) { menuView.classList.remove('show'); menuView.hidden = true; }
+        if (container) container.hidden = false;
+        ensureBackArrow();
+        applyOption(prevOpt);
+        // Fallback de visibilidad por si la opción previa no activó ningún panel
+        const rvPrev = document.getElementById('requestsResultsView');
+        const nothingVisiblePrev = (!menuView || menuView.hidden) && (!container || container.hidden) && (!searchView || searchView.hidden) && (!rvPrev || rvPrev.hidden);
+        if (nothingVisiblePrev) {
+          if (container) container.hidden = false;
+          if (menuView) { menuView.classList.remove('show'); menuView.hidden = true; }
+          setFiltersActive('my');
+          setRequestsView('my');
+        }
+      } else {
+        if (container) container.hidden = true;
+        if (backBtn) backBtn.hidden = true;
+        if (menuView) { menuView.hidden = false; void menuView.offsetWidth; menuView.classList.add('show'); }
+      }
     }
     trapFocus(modal);
     const backdrop = modal.querySelector('.modal-backdrop');
@@ -2373,6 +2439,15 @@ function openChartModal(defaultId, previewType) {
       const rv = document.getElementById('requestsResultsView');
       if (sv) { sv.classList.remove('show'); sv.hidden = true; }
       if (rv) { rv.classList.remove('show'); rv.hidden = true; }
+      try {
+        const lo = requestsState.lastOption;
+        requestsState.prevOption = lo;
+        requestsState.lastOption = 'menu';
+        const forceMenu = (lo === 'my' || lo === 'received' || lo === 'closed');
+        if (forceMenu) requestsState.prevOption = 'menu';
+        const toStore = (!forceMenu && requestsState.prevOption && requestsState.prevOption !== 'menu') ? requestsState.prevOption : null;
+        setRequestsPersisted({ opt: toStore, view: requestsState.view, query: requestsState.query, filterMode: requestsState.filterMode });
+      } catch(_){ }
     }, 180);
   }
 
@@ -2527,14 +2602,19 @@ function openChartModal(defaultId, previewType) {
           m.classList.remove('show');
           m.setAttribute('hidden','true');
           const panel = document.getElementById('requestNewPanel');
+          const listPanel = document.getElementById('requestsListPanel');
           const container = document.getElementById('requestsContainer');
           const menuView = document.getElementById('requestsMenuView');
-          const backArrow = document.getElementById('requestsBackArrow');
+          const topbar = document.querySelector('#requestsContainer .requests-topbar');
+          const filtersBar = document.querySelector('#requestsContainer .requests-filters');
           requestsState.lastOption = 'menu';
           if (panel) { panel.classList.remove('show'); panel.setAttribute('aria-hidden','true'); panel.hidden = true; }
-          if (container) container.hidden = true;
+          if (listPanel) { listPanel.hidden = false; listPanel.classList.remove('dimmed'); }
+          if (container) { container.hidden = true; container.classList.remove('overlaying'); }
+          if (topbar) topbar.hidden = false;
+          if (filtersBar) filtersBar.hidden = false;
           if (menuView) { menuView.hidden = false; void menuView.offsetWidth; menuView.classList.add('show'); }
-          if (backArrow) backArrow.hidden = true;
+          removeBackArrow();
         });
         backBtn.dataset.bound='1';
       }
